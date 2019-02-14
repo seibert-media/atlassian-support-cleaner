@@ -8,6 +8,7 @@ import zipfile
 
 TMPDIR = 'tmpdir'
 
+
 def _arguments():
     parser = argparse.ArgumentParser(
         description='CLI tool to clean atlassian support.zip from various data',
@@ -28,6 +29,14 @@ def _arguments():
     return parser.parse_args()
 
 
+def _zipdir(path, ziph):
+    # ziph is zipfile handle
+    for root, dirs, files in os.walk(path):
+        for file in files:
+            filepath = os.path.join(root, file)
+            ziph.write(filename=filepath, arcname=filepath[len(path):])
+
+
 args = _arguments()
 
 print('---')
@@ -36,6 +45,7 @@ print('---')
 
 print('Create temporary folder for extraction and replacements')
 shutil.rmtree(TMPDIR)
+os.remove('cleaned.zip')
 os.mkdir(TMPDIR)
 
 print('Extract support zip')
@@ -55,6 +65,7 @@ for logfile in applogfiles:
     with open(f'{TMPDIR}/application-logs/{logfile}', 'w+') as file:
         file.write(logcontent)
 
+with zipfile.ZipFile('cleaned.zip', 'w', zipfile.ZIP_DEFLATED) as cleanedzip:
+    _zipdir(TMPDIR, cleanedzip)
 
-
-#shutil.rmtree(TMPDIR)
+# shutil.rmtree(TMPDIR)
