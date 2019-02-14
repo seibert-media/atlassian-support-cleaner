@@ -1,0 +1,60 @@
+#!/usr/bin/env python3
+
+import argparse
+import os
+import re
+import shutil
+import zipfile
+
+TMPDIR = 'tmpdir'
+
+def _arguments():
+    parser = argparse.ArgumentParser(
+        description='CLI tool to clean atlassian support.zip from various data',
+    )
+    parser.add_argument(
+        'supportzip',
+        help='Path to support zip file to be cleaned',
+    )
+    parser.add_argument(
+        'baseurl',
+        help='Base-URL of the corresponding system',
+    )
+    parser.add_argument(
+        '--debug', '-d',
+        action='store_true',
+        help='activate debug log level',
+    )
+    return parser.parse_args()
+
+
+args = _arguments()
+
+print('---')
+print('CLI tool to clean atlassian support.zip from various data')
+print('---')
+
+print('Create temporary folder for extraction and replacements')
+shutil.rmtree(TMPDIR)
+os.mkdir(TMPDIR)
+
+print('Extract support zip')
+supportzip = zipfile.ZipFile(args.supportzip, 'r')
+supportzip.extractall(TMPDIR)
+supportzip.close()
+
+applogfiles = os.listdir(f'{TMPDIR}/application-logs/')
+
+for logfile in applogfiles:
+    with open(f'{TMPDIR}/application-logs/{logfile}', 'r') as file:
+        logcontent = file.read()
+        logcontent, nr = re.subn(re.escape(args.baseurl), 'URL_CLEANED', logcontent)  # Clean URL
+        print(f'Cleaned {nr} occurences of baseurl in {logfile}')
+        logcontent, nr = re.subn('userName: \S*', 'userName: USERNAME_CLEANED', logcontent)  # Clean user names
+        print(f'Cleaned {nr} names in {logfile}')
+    with open(f'{TMPDIR}/application-logs/{logfile}', 'w+') as file:
+        file.write(logcontent)
+
+
+
+#shutil.rmtree(TMPDIR)
