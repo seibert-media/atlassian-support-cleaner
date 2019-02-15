@@ -4,10 +4,11 @@ CLI tool to clean atlassian support.zip from various data
 Description
 ---
 
-Even if Atlassian clears some data out when creating a Confluence support zip, there still remains plenty information (amongst others also personal information) about your system and users.
+Even if Atlassian cleans some data out when creating a Confluence support zip, there still remains plenty information (amongst others also personal information) about your system and users.
 
-This tool is designed to clear out the base URL and Usernames (see **How it works** what this means exactly). 
+This tool is designed to clean out the base URL and Usernames (see **How it works** what this means exactly). 
 
+(May work with other support zip files, but is only tested for Confluence.)
 
 Usage
 --- 
