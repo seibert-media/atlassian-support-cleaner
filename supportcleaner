@@ -35,8 +35,8 @@ def _prepare():
     os.mkdir(TMPDIR)
 
 
-def _extract_zip(args):
-    supportzip = zipfile.ZipFile(args.supportzip, 'r')
+def _extract_zip(supportzip):
+    supportzip = zipfile.ZipFile(supportzip, 'r')
     supportzip.extractall(TMPDIR)
     supportzip.close()
 
@@ -82,7 +82,7 @@ if __name__ == '__main__':
         pass
 
     print('Extract support zip')
-    _extract_zip(args)
+    _extract_zip(supportzip=args.supportzip)
 
     print('Clear unwanted information:')
     _replace_pattern_in_logs(pattern=re.escape(args.baseurl), replacement='URL_CLEANED')  # Clean URL
