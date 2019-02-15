@@ -29,6 +29,34 @@ def _arguments():
     return parser.parse_args()
 
 
+def _prepare():
+    shutil.rmtree(TMPDIR)
+    os.remove('cleaned.zip')
+    os.mkdir(TMPDIR)
+
+
+def _extract_zip(args):
+    supportzip = zipfile.ZipFile(args.supportzip, 'r')
+    supportzip.extractall(TMPDIR)
+    supportzip.close()
+
+
+def _replace_pattern_in_logs(pattern: str, replacement: str):
+    applogfiles = os.listdir(f'{TMPDIR}/application-logs/')
+    for logfile in applogfiles:
+        with open(f'{TMPDIR}/application-logs/{logfile}', 'r') as file:
+            logcontent = file.read()
+            logcontent, nr = re.subn(pattern=re.compile(pattern), repl=replacement, string=logcontent)
+            print(f'{nr} replacements ({replacement}) in {logfile}')
+        with open(f'{TMPDIR}/application-logs/{logfile}', 'w+') as file:
+            file.write(logcontent)
+
+
+def _create_cleaned_zip():
+    with zipfile.ZipFile('cleaned.zip', 'w', zipfile.ZIP_DEFLATED) as cleanedzip:
+        _zipdir(TMPDIR, cleanedzip)
+
+
 def _zipdir(path, ziph):
     # ziph is zipfile handle
     for root, dirs, files in os.walk(path):
@@ -37,35 +65,30 @@ def _zipdir(path, ziph):
             ziph.write(filename=filepath, arcname=filepath[len(path):])
 
 
-args = _arguments()
+def _cleanup():
+    pass
 
-print('---')
-print('CLI tool to clean atlassian support.zip from various data')
-print('---')
 
-print('Create temporary folder for extraction and replacements')
-shutil.rmtree(TMPDIR)
-os.remove('cleaned.zip')
-os.mkdir(TMPDIR)
+if __name__ == '__main__':
+    args = _arguments()
 
-print('Extract support zip')
-supportzip = zipfile.ZipFile(args.supportzip, 'r')
-supportzip.extractall(TMPDIR)
-supportzip.close()
+    print('---')
+    print('CLI tool to clean atlassian support.zip from various data')
+    print('---')
 
-applogfiles = os.listdir(f'{TMPDIR}/application-logs/')
+    try:
+        _prepare()
+    except:
+        pass
 
-for logfile in applogfiles:
-    with open(f'{TMPDIR}/application-logs/{logfile}', 'r') as file:
-        logcontent = file.read()
-        logcontent, nr = re.subn(re.escape(args.baseurl), 'URL_CLEANED', logcontent)  # Clean URL
-        print(f'Cleaned {nr} occurences of baseurl in {logfile}')
-        logcontent, nr = re.subn('userName: \S*', 'userName: USERNAME_CLEANED', logcontent)  # Clean user names
-        print(f'Cleaned {nr} names in {logfile}')
-    with open(f'{TMPDIR}/application-logs/{logfile}', 'w+') as file:
-        file.write(logcontent)
+    print('Extract support zip')
+    _extract_zip(args)
 
-with zipfile.ZipFile('cleaned.zip', 'w', zipfile.ZIP_DEFLATED) as cleanedzip:
-    _zipdir(TMPDIR, cleanedzip)
+    print('Clear unwanted information:')
+    _replace_pattern_in_logs(pattern=re.escape(args.baseurl), replacement='URL_CLEANED')  # Clean URL
+    _replace_pattern_in_logs(pattern='userName: \\S*', replacement='userName: USERNAME_CLEANED')  # Clean user names
 
-# shutil.rmtree(TMPDIR)
+    print('Create cleaned.zip')
+    _create_cleaned_zip()
+
+    _cleanup()
