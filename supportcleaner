@@ -94,7 +94,7 @@ if __name__ == '__main__':
 
     try:
         _prepare()
-    except:
+    except FileNotFoundError:
         pass
 
     print('Extract support zip')
