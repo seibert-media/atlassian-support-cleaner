@@ -3,10 +3,11 @@
 import argparse
 import os
 import re
-import shutil
 import zipfile
 
-TMPDIR = 'tmpdir'
+from tempfile import TemporaryDirectory
+
+TMPDIR = TemporaryDirectory()
 
 
 def _arguments():
@@ -30,31 +31,29 @@ def _arguments():
 
 
 def _prepare():
-    shutil.rmtree(TMPDIR)
     os.remove('cleaned.zip')
-    os.mkdir(TMPDIR)
 
 
 def _extract_zip(supportzip):
     supportzip = zipfile.ZipFile(supportzip, 'r')
-    supportzip.extractall(TMPDIR)
+    supportzip.extractall(TMPDIR.name)
     supportzip.close()
 
 
 def _replace_pattern_in_logs(pattern: str, replacement: str):
-    applogfiles = os.listdir(f'{TMPDIR}/application-logs/')
+    applogfiles = os.listdir(f'{TMPDIR.name}/application-logs/')
     for logfile in applogfiles:
-        with open(f'{TMPDIR}/application-logs/{logfile}', 'r') as file:
+        with open(f'{TMPDIR.name}/application-logs/{logfile}', 'r') as file:
             logcontent = file.read()
             logcontent, nr = re.subn(pattern=re.compile(pattern), repl=replacement, string=logcontent)
             print(f'{nr} replacements ({replacement}) in {logfile}')
-        with open(f'{TMPDIR}/application-logs/{logfile}', 'w+') as file:
+        with open(f'{TMPDIR.name}/application-logs/{logfile}', 'w+') as file:
             file.write(logcontent)
 
 
 def _create_cleaned_zip():
     with zipfile.ZipFile('cleaned.zip', 'w', zipfile.ZIP_DEFLATED) as cleanedzip:
-        _zipdir(TMPDIR, cleanedzip)
+        _zipdir(TMPDIR.name, cleanedzip)
 
 
 def _zipdir(path, ziph):
@@ -66,7 +65,7 @@ def _zipdir(path, ziph):
 
 
 def _cleanup():
-    pass
+    TMPDIR.cleanup()
 
 
 if __name__ == '__main__':
