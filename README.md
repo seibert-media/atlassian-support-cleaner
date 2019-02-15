@@ -27,7 +27,7 @@ How it works
 
 This tool does cleaning the support zip by
 - extracting the zip file
-- replacing:
+- replacing **only** in files in "application-logs/":
 
 |Search-String|Replacement|
 |---|---|
