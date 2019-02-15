@@ -10,6 +10,12 @@ This tool is designed to clean out the base URL and Usernames (see **How it work
 
 (May work with other support zip files, but is only tested for Confluence.)
 
+Requirements
+---
+
+Python &ge; 3.6
+
+
 Usage
 --- 
 
