@@ -8,14 +8,15 @@ import zipfile
 
 from tempfile import TemporaryDirectory
 
-if sys.version_info < (3, 6):
-    raise Exception('Python in version 3.6 or higher is required to run this tool.')
+if sys.version_info < (3, 5):
+    raise Exception('Python in version 3.5 or higher is required to run this tool.')
 
 TMPDIR = TemporaryDirectory()
 
+# All files in the defined directories and all subdirectories will be cleaned
+# Setting this to '.' or '/' will cause the tool to clean all existing files in the zip
 LOGDIRS = [
-    'application-logs',
-    'tomcat-logs',
+    '.',
 ]
 
 

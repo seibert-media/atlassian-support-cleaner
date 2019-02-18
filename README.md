@@ -13,7 +13,7 @@ This tool is designed to clean out the base URL and Usernames (see **How it work
 Requirements
 ---
 
-Python &ge; 3.6
+Python &ge; 3.5
 
 
 Usage
