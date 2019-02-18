@@ -110,7 +110,7 @@ if __name__ == '__main__':
     args = _arguments()
 
     print('---')
-    print('CLI tool to clean atlassian support.zip from various data')
+    print('CLI tool to clean Atlassian support.zip from various data')
     print('---')
 
     _prepare()
