@@ -33,7 +33,7 @@ How it works
 
 This tool does cleaning the support zip by
 - extracting the zip file
-- replacing **only** in files in "application-logs/":
+- replacing in files (defined via LOGDIR, default: all):
 
 |Search-String|Replacement|
 |---|---|
@@ -42,7 +42,7 @@ This tool does cleaning the support zip by
 
 (_NAME_WITHOUT_SPACE_ matches on all not white space characters)
 
-- creating new zip named "**cleaned.zip**"
+- creating new zip named "**cleaned.zip**" (if already existing, it will be deleted at program start)
 
 Disclaimer
 ---
