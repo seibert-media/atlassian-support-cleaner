@@ -19,7 +19,7 @@ LOGDIRS = [
 ]
 
 
-def _arguments():
+def _arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description='CLI tool to clean atlassian support.zip from various data',
     )
@@ -42,6 +42,7 @@ def _arguments():
 def _prepare():
     try:
         os.remove('cleaned.zip')
+        print('Removed existing cleaned.zip')
     except FileNotFoundError:
         pass
 
@@ -54,26 +55,31 @@ def _extract_zip(supportzip: str):
 
 def _clean_logs(baseurl: str):
     for logdir in LOGDIRS:
+        logfiles = _list_files_in_dir('{tmpdir}/{logdir}'.format(tmpdir=TMPDIR.name, logdir=logdir))
         _replace_pattern_in_logs(  # Clean URL
             pattern=re.escape(baseurl),
             replacement='URL_CLEANED',
-            logdir=logdir
+            logfiles=logfiles,
         )
         _replace_pattern_in_logs(  # Clean user names
             pattern='userName: \\S*',
             replacement='userName: USERNAME_CLEANED',
-            logdir=logdir
+            logfiles=logfiles,
         )
 
 
-def _replace_pattern_in_logs(pattern: str, replacement: str, logdir: str):
-    applogfiles = os.listdir(f'{TMPDIR.name}/{logdir}/')
-    for logfile in applogfiles:
-        with open(f'{TMPDIR.name}/{logdir}/{logfile}', 'r') as file:
+def _replace_pattern_in_logs(pattern: str, replacement: str, logfiles: [str]):
+    for logfile in logfiles:
+        with open(logfile, 'r') as file:
             logcontent = file.read()
             logcontent, nr = re.subn(pattern=re.compile(pattern), repl=replacement, string=logcontent)
-            print(f'{nr} replacements ({replacement}) in {logfile}')
-        with open(f'{TMPDIR.name}/{logdir}/{logfile}', 'w+') as file:
+            if nr:
+                print('{nr} replacements ({replacement}) in {logfile}'.format(
+                    nr=nr,
+                    replacement=replacement,
+                    logfile=logfile[len(TMPDIR.name)+1:],
+                ))
+        with open(logfile, 'w+') as file:
             file.write(logcontent)
 
 
@@ -83,10 +89,16 @@ def _create_cleaned_zip():
 
 
 def _zip_dir(path: str, ziph: zipfile.ZipFile):
+    for filepath in _list_files_in_dir(path):
+        ziph.write(filename=filepath, arcname=filepath[len(path)+1:])
+
+
+def _list_files_in_dir(path: str) -> [str]:
+    filelist = []
     for root, dirs, files in os.walk(path):
         for file in files:
-            filepath = os.path.join(root, file)
-            ziph.write(filename=filepath, arcname=filepath[len(path):])
+            filelist.append(os.path.join(root, file))
+    return filelist
 
 
 def _cleanup():
