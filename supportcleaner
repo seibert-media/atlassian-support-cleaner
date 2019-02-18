@@ -32,11 +32,6 @@ def _arguments() -> argparse.Namespace:
         'baseurl',
         help='Base-URL of the corresponding system',
     )
-    parser.add_argument(
-        '--debug', '-d',
-        action='store_true',
-        help='activate debug log level',
-    )
     return parser.parse_args()
 
 
