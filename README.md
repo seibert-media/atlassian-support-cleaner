@@ -44,6 +44,11 @@ This tool does cleaning the support zip by
 
 - creating new zip named "**cleaned.zip**" (if already existing, it will be deleted at program start)
 
+Notes
+---
+
+Please be aware, that due to creating a new zip all original timestamps as well as file owners and permissions are lost.
+
 Disclaimer
 ---
 
