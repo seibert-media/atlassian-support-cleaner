@@ -15,6 +15,7 @@ TMPDIR = TemporaryDirectory()
 
 LOGDIRS = [
     'application-logs',
+    'tomcat-logs',
 ]
 
 
@@ -39,7 +40,10 @@ def _arguments():
 
 
 def _prepare():
-    os.remove('cleaned.zip')
+    try:
+        os.remove('cleaned.zip')
+    except FileNotFoundError:
+        pass
 
 
 def _extract_zip(supportzip: str):
@@ -96,10 +100,7 @@ if __name__ == '__main__':
     print('CLI tool to clean atlassian support.zip from various data')
     print('---')
 
-    try:
-        _prepare()
-    except FileNotFoundError:
-        pass
+    _prepare()
 
     print('Extract support zip')
     _extract_zip(supportzip=args.supportzip)
