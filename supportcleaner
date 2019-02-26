@@ -14,6 +14,8 @@ LOGDIRS = [
     '.',
 ]
 
+MAX_TMP_DIR_SIZE = (200*1024*1024)
+
 TMPDIR = TemporaryDirectory()
 
 if sys.version_info < (3, 5):
@@ -44,9 +46,19 @@ def _prepare():
 
 
 def _extract_zip(supportzip: str):
-    supportzip = zipfile.ZipFile(supportzip, 'r')
-    supportzip.extractall(TMPDIR.name)
-    supportzip.close()
+    zipf = zipfile.ZipFile(supportzip, 'r')
+    if _get_uncompressed_size(zipf) > MAX_TMP_DIR_SIZE:
+        zipf.close()
+        raise Exception('Decompressed size exceeds allowed MAX_TMP_DIR_SIZE of {} bytes'.format(MAX_TMP_DIR_SIZE))
+    zipf.extractall(TMPDIR.name)
+    zipf.close()
+
+
+def _get_uncompressed_size(zipf: zipfile.ZIP_DEFLATED):
+    size = 0
+    for file in zipf.infolist():
+        size += file.file_size
+    return size
 
 
 def _clean_logs(baseurl: str):
@@ -58,7 +70,7 @@ def _clean_logs(baseurl: str):
             logfiles=logfiles,
         )
         _replace_pattern_in_logs(  # Clean user names
-            pattern='userName: \\S*',
+            pattern='userName: \\S+',
             replacement='userName: USERNAME_CLEANED',
             logfiles=logfiles,
         )
