@@ -67,14 +67,27 @@ def _prepare():
 
 
 def _extract_zip(supportzip: str):
+    global MAX_TMP_DIR_SIZE
     zipf = zipfile.ZipFile(supportzip, 'r')
     uncompressed_size = _get_uncompressed_size(zipf)
-    if uncompressed_size > MAX_TMP_DIR_SIZE:
-        zipf.close()
-        raise Exception('WARNING: Decompressed size of {uncomp} exceeds allowed MAX_TMP_DIR_SIZE of {max_size} bytes'.format(
+    while uncompressed_size > MAX_TMP_DIR_SIZE:
+        print('WARNING: Decompressed size of {uncomp} exceeds allowed MAX_TMP_DIR_SIZE of {max_size} bytes'.format(
             uncomp=add_unit_prefix(uncompressed_size),
             max_size=add_unit_prefix(MAX_TMP_DIR_SIZE),
         ))
+        answer = input(
+            'Change MAX_TMP_DIR_SIZE to: (Enter value, prefixes are allowed (KiB, MiB, GiB, ...); a to abort)'
+        )
+
+        if answer == 'a':
+            zipf.close()
+            print('Aborted by user.')
+            exit()
+
+        try:
+            MAX_TMP_DIR_SIZE, _ = remove_unit_prefix(answer)
+        except AttributeError:
+            print('Input leads to an error: Please enter something like "30MiB"')
 
     zipf.extractall(TMPDIR.name)
     zipf.close()
