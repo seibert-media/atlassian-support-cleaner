@@ -19,13 +19,13 @@ Python &ge; 3.5
 Usage
 --- 
 
-**./supportcleaner** _SUPPORT_ZIP_ _BASEURL_
+**./supportcleaner.py** _SUPPORT_ZIP_ _BASEURL_
 
 
 Example
 ---
 ```bash
-./supportcleaner Confluence_support_2019-02-14-11-43-28.zip my-base-url.net
+./supportcleaner.py Confluence_support_2019-02-14-11-43-28.zip my-base-url.net
 ```
 
 How it works

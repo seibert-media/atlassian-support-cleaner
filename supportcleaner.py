@@ -14,12 +14,33 @@ LOGDIRS = [
     '.',
 ]
 
-MAX_TMP_DIR_SIZE = (200*1024*1024)
+MAX_TMP_DIR_SIZE = (200 * 1024 * 1024)
 
 TMPDIR = TemporaryDirectory()
 
 if sys.version_info < (3, 5):
     raise Exception('Python in version 3.5 or higher is required to run this tool.')
+
+
+def add_unit_prefix(num: float, suffix='B') -> str:
+    """
+    source: https://stackoverflow.com/questions/1094841/reusable-library-to-get-human-readable-version-of-file-size
+    """
+    for unit in ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi']:
+        if abs(num) < 1024.0:
+            return "%3.1f%s%s" % (num, unit, suffix)
+        num /= 1024.0
+    return "%.1f%s%s" % (num, 'Yi', suffix)
+
+
+def remove_unit_prefix(numstr: str) -> float:
+    num, prefix, unit = re.match(pattern=r'(\d+\.?\d*)([KMGTPEZY]i)?(.*)', string=numstr).groups()
+    num = float(num)
+    for i in ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi']:
+        if prefix == i:
+            return num
+        else:
+            num *= 1024
 
 
 def _arguments() -> argparse.Namespace:
@@ -47,9 +68,14 @@ def _prepare():
 
 def _extract_zip(supportzip: str):
     zipf = zipfile.ZipFile(supportzip, 'r')
-    if _get_uncompressed_size(zipf) > MAX_TMP_DIR_SIZE:
+    uncompressed_size = _get_uncompressed_size(zipf)
+    if uncompressed_size > MAX_TMP_DIR_SIZE:
         zipf.close()
-        raise Exception('Decompressed size exceeds allowed MAX_TMP_DIR_SIZE of {} bytes'.format(MAX_TMP_DIR_SIZE))
+        raise Exception('WARNING: Decompressed size of {uncomp} exceeds allowed MAX_TMP_DIR_SIZE of {max_size} bytes'.format(
+            uncomp=add_unit_prefix(uncompressed_size),
+            max_size=add_unit_prefix(MAX_TMP_DIR_SIZE),
+        ))
+
     zipf.extractall(TMPDIR.name)
     zipf.close()
 
