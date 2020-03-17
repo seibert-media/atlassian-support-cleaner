@@ -57,4 +57,4 @@ Please be aware, that this tool cannot garantee to cleanup all personal informat
 License
 ---
 
-MIT &copy; 2019 //SEIBERT/MEDIA GmbH
+MIT &copy; 2019-2020 //SEIBERT/MEDIA GmbH
