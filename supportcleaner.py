@@ -33,12 +33,12 @@ def add_unit_prefix(num: float, suffix='B') -> str:
     return "%.1f%s%s" % (num, 'Yi', suffix)
 
 
-def remove_unit_prefix(numstr: str) -> float:
+def remove_unit_prefix(numstr: str) -> (float, str):
     num, prefix, unit = re.match(pattern=r'(\d+\.?\d*)([KMGTPEZY]i)?(.*)', string=numstr).groups()
     num = float(num)
     for i in ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi']:
         if prefix == i:
-            return num
+            return num, unit
         else:
             num *= 1024
 
