@@ -15,8 +15,6 @@ LOGDIRS = [
     '.',
 ]
 
-MAX_TMP_DIR_SIZE = int(os.getenv('MAX_TMP_DIR_SIZE', (200 * 1024 * 1024)))
-
 TMPDIR = TemporaryDirectory()
 
 if sys.version_info < (3, 5):
@@ -36,11 +34,11 @@ def add_unit_prefix(num: float, unit='B') -> str:
 
 def remove_unit_prefix(numstr: str) -> (float, str):
     num, prefix, unit = re.match(pattern=r'(\d+\.?\d*)([KMGTPEZY]i)?(.*)', string=numstr).groups()
+    num = float(num)
 
     if prefix is None:
-        return num, ''
+        return num, unit
 
-    num = float(num)
     for i in ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi']:
         if prefix == i:
             return num, unit
@@ -172,6 +170,8 @@ def _list_files_in_dir(path: str) -> [str]:
 def _cleanup():
     TMPDIR.cleanup()
 
+
+MAX_TMP_DIR_SIZE, _ = remove_unit_prefix(os.getenv('MAX_TMP_DIR_SIZE', '200MiB'))
 
 if __name__ == '__main__':
     args = _arguments()
