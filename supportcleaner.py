@@ -33,7 +33,7 @@ def add_unit_prefix(num: float, unit='B') -> str:
 
 
 def remove_unit_prefix(numstr: str) -> (float, str):
-    num, prefix, unit = re.match(pattern=r'(\d+\.?\d*)([KMGTPEZY]i)?(.*)', string=numstr).groups()
+    num, prefix, unit = re.match(pattern=r'(\d+\.?\d*)\s?([KMGTPEZY]i)?(.*)', string=numstr).groups()
     num = float(num)
 
     if prefix is None:
