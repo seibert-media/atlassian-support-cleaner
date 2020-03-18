@@ -98,7 +98,7 @@ def _extract_zip(supportzip: str):
         try:
             MAX_TMP_DIR_SIZE, _ = remove_unit_prefix(answer)
             print('Changed MAX_TMP_DIR_SIZE to {}\n'.format(answer))
-        except (AttributeError, TypeError):
+        except AttributeError:
             print('Input leads to an error: Please enter something like "30MiB"')
 
     zipf.extractall(TMPDIR.name)

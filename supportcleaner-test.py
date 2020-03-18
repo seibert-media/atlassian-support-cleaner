@@ -1,4 +1,5 @@
 # Install pytest for testing `pip install pytest`
+import pytest
 
 from supportcleaner import add_unit_prefix, remove_unit_prefix
 
@@ -11,3 +12,6 @@ def test_add_unit_prefix():
 def test_remove_unit_prefix():
     assert remove_unit_prefix('4.0KiB') == (4096, 'B')
     assert remove_unit_prefix('2.3GiV') == (2469606195.2, 'V')
+    assert remove_unit_prefix('50') == (50.0, '')
+    with pytest.raises(AttributeError):
+        remove_unit_prefix('Hallo Otto')
