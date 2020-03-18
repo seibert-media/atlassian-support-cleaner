@@ -6,6 +6,7 @@ import re
 import sys
 import zipfile
 
+from pathlib import Path
 from tempfile import TemporaryDirectory
 
 # All files in the defined directories and all subdirectories will be cleaned.
@@ -35,6 +36,10 @@ def add_unit_prefix(num: float, unit='B') -> str:
 
 def remove_unit_prefix(numstr: str) -> (float, str):
     num, prefix, unit = re.match(pattern=r'(\d+\.?\d*)([KMGTPEZY]i)?(.*)', string=numstr).groups()
+
+    if prefix is None:
+        return num, ''
+
     num = float(num)
     for i in ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi']:
         if prefix == i:
@@ -124,7 +129,7 @@ def _clean_logs(baseurl: str):
         )
 
     input(
-        'Automatic cleaning finished. The extracted files are available at {tmpdir}.'
+        '\nAutomatic cleaning finished. The extracted files are available at {tmpdir}. '
         'If you like, you can cleanup additional things manually or check how the files look like.\n'
         'Press Enter to proceed.\n'
         ''.format(tmpdir=TMPDIR.name)
@@ -140,7 +145,7 @@ def _replace_pattern_in_logs(pattern: str, replacement: str, logfiles: [str]):
                 print('{nr} replacements ({replacement}) in {logfile}'.format(
                     nr=nr,
                     replacement=replacement,
-                    logfile=logfile[len(TMPDIR.name) + 1:],
+                    logfile=Path(logfile).relative_to(TMPDIR.name),
                 ))
         with open(logfile, 'w+') as file:
             file.write(logcontent)
@@ -152,8 +157,8 @@ def _create_cleaned_zip():
 
 
 def _zip_dir(ziph: zipfile.ZipFile):
-    for filepath in _list_files_in_dir(TMPDIR.name):
-        ziph.write(filename=filepath, arcname=filepath[len(TMPDIR.name) + 1:])
+    for file in _list_files_in_dir(TMPDIR.name):
+        ziph.write(filename=file, arcname=str(Path(file).relative_to(TMPDIR.name)))
 
 
 def _list_files_in_dir(path: str) -> [str]:
@@ -175,15 +180,16 @@ if __name__ == '__main__':
     print('CLI tool to clean Atlassian support.zip from various data')
     print('---')
 
-    _prepare()
+    try:
+        _prepare()
 
-    print('Extract support zip')
-    _extract_zip(supportzip=args.supportzip)
+        print('Extract support zip')
+        _extract_zip(supportzip=args.supportzip)
 
-    print('Clean unwanted information:')
-    _clean_logs(baseurl=args.baseurl)
+        print('Clean unwanted information:')
+        _clean_logs(baseurl=args.baseurl)
 
-    print('Create cleaned.zip')
-    _create_cleaned_zip()
-
-    _cleanup()
+        print('Create cleaned.zip')
+        _create_cleaned_zip()
+    finally:
+        _cleanup()
