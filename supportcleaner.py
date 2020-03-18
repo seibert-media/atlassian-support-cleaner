@@ -127,13 +127,8 @@ def _clean_logs(baseurl: str):
             replacement='userName: USERNAME_CLEANED',
             logfiles=logfiles,
         )
-
-    input(
-        '\nAutomatic cleaning finished. The extracted files are available at {tmpdir}. '
-        'If you like, you can cleanup additional things manually or check how the files look like.\n'
-        'Press Enter to proceed.\n'
-        ''.format(tmpdir=TMPDIR.name)
-    )
+    _clean_maillogs()
+    _clean_manual()
 
 
 def _replace_pattern_in_logs(pattern: str, replacement: str, logfiles: [str]):
@@ -151,6 +146,30 @@ def _replace_pattern_in_logs(pattern: str, replacement: str, logfiles: [str]):
             file.write(logcontent)
 
 
+def _clean_maillogs():
+    maillogfiles = _list_files_in_dir(TMPDIR.name, pattern=r'.*(incoming|outgoing)-mail\.log')
+    print('\nFound following mail log files:')
+    for file in maillogfiles:
+        print(Path(file).relative_to(TMPDIR.name))
+    while True:
+        answer = input('\nDelete mail log files? (y/n)')
+        if answer == 'y':
+            for file in maillogfiles:
+                os.remove(file)
+            break
+        if answer == 'n':
+            break
+
+
+def _clean_manual():
+    input(
+        '\nAutomatic cleaning finished. The extracted files are available at {tmpdir}. '
+        'If you like, you can cleanup additional things manually or check how the files look like.\n'
+        'Press Enter to proceed.\n'
+        ''.format(tmpdir=TMPDIR.name)
+    )
+
+
 def _create_cleaned_zip():
     with zipfile.ZipFile('cleaned.zip', 'w', zipfile.ZIP_DEFLATED) as cleanedzip:
         _zip_dir(cleanedzip)
@@ -161,11 +180,12 @@ def _zip_dir(ziph: zipfile.ZipFile):
         ziph.write(filename=file, arcname=str(Path(file).relative_to(TMPDIR.name)))
 
 
-def _list_files_in_dir(path: str) -> [str]:
+def _list_files_in_dir(path: str, pattern='.*') -> [str]:
     filelist = []
     for root, dirs, files in os.walk(path):
         for file in files:
-            filelist.append(os.path.join(root, file))
+            if re.match(pattern=pattern, string=file):
+                filelist.append(os.path.join(root, file))
     return filelist
 
 
