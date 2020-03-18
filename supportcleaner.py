@@ -83,7 +83,7 @@ def _extract_zip(supportzip: str):
         answer = input(
             'Free disk space: {free_space}\n\n'
             'Change MAX_TMP_DIR_SIZE to:\n'
-            '(Enter value, prefixes are allowed (KiB, MiB, GiB, ...); a to abort)\n'
+            '(Enter value in bytes, prefixes are allowed (KiB, MiB, GiB, ...); a to abort)\n'
             ''.format(free_space=add_unit_prefix(get_free_disk_space(TMPDIR.name)))
         )
 
@@ -148,12 +148,12 @@ def _replace_pattern_in_logs(pattern: str, replacement: str, logfiles: [str]):
 
 def _create_cleaned_zip():
     with zipfile.ZipFile('cleaned.zip', 'w', zipfile.ZIP_DEFLATED) as cleanedzip:
-        _zip_dir(TMPDIR.name, cleanedzip)
+        _zip_dir(cleanedzip)
 
 
-def _zip_dir(path: str, ziph: zipfile.ZipFile):
-    for filepath in _list_files_in_dir(path):
-        ziph.write(filename=filepath, arcname=filepath[len(path) + 1:])
+def _zip_dir(ziph: zipfile.ZipFile):
+    for filepath in _list_files_in_dir(TMPDIR.name):
+        ziph.write(filename=filepath, arcname=filepath[len(TMPDIR.name) + 1:])
 
 
 def _list_files_in_dir(path: str) -> [str]:
