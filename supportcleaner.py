@@ -22,15 +22,15 @@ if sys.version_info < (3, 5):
     raise Exception('Python in version 3.5 or higher is required to run this tool.')
 
 
-def add_unit_prefix(num: float, suffix='B') -> str:
+def add_unit_prefix(num: float, unit='B') -> str:
     """
     source: https://stackoverflow.com/questions/1094841/reusable-library-to-get-human-readable-version-of-file-size
     """
-    for unit in ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi']:
+    for prefix in ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi']:
         if abs(num) < 1024.0:
-            return "%3.1f%s%s" % (num, unit, suffix)
+            return "%3.1f%s%s" % (num, prefix, unit)
         num /= 1024.0
-    return "%.1f%s%s" % (num, 'Yi', suffix)
+    return "%.1f%s%s" % (num, 'Yi', unit)
 
 
 def remove_unit_prefix(numstr: str) -> (float, str):
