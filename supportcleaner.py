@@ -43,6 +43,11 @@ def remove_unit_prefix(numstr: str) -> (float, str):
             num *= 1024
 
 
+def get_free_disk_space(path: str):
+    s = os.statvfs(path)
+    return s.f_frsize * s.f_bavail
+
+
 def _arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description='CLI tool to clean Atlassian support.zip from various data',
@@ -71,12 +76,15 @@ def _extract_zip(supportzip: str):
     zipf = zipfile.ZipFile(supportzip, 'r')
     uncompressed_size = _get_uncompressed_size(zipf)
     while uncompressed_size > MAX_TMP_DIR_SIZE:
-        print('WARNING: Decompressed size of {uncomp} exceeds allowed MAX_TMP_DIR_SIZE of {max_size} bytes'.format(
+        print('\nWARNING: Decompressed size of {uncomp} exceeds allowed MAX_TMP_DIR_SIZE of {max_size}.'.format(
             uncomp=add_unit_prefix(uncompressed_size),
             max_size=add_unit_prefix(MAX_TMP_DIR_SIZE),
         ))
         answer = input(
-            'Change MAX_TMP_DIR_SIZE to: (Enter value, prefixes are allowed (KiB, MiB, GiB, ...); a to abort)'
+            'Free disk space: {free_space}\n\n'
+            'Change MAX_TMP_DIR_SIZE to:\n'
+            '(Enter value, prefixes are allowed (KiB, MiB, GiB, ...); a to abort)\n'
+            ''.format(free_space=add_unit_prefix(get_free_disk_space(TMPDIR.name)))
         )
 
         if answer == 'a':
@@ -86,6 +94,7 @@ def _extract_zip(supportzip: str):
 
         try:
             MAX_TMP_DIR_SIZE, _ = remove_unit_prefix(answer)
+            print('Changed MAX_TMP_DIR_SIZE to {}\n'.format(answer))
         except AttributeError:
             print('Input leads to an error: Please enter something like "30MiB"')
 
