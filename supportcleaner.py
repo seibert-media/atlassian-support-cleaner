@@ -123,6 +123,13 @@ def _clean_logs(baseurl: str):
             logfiles=logfiles,
         )
 
+    input(
+        'Automatic cleaning finished. The extracted files are available at {tmpdir}.'
+        'If you like, you can cleanup additional things manually or check how the files look like.\n'
+        'Press Enter to proceed.'
+        ''.format(tmpdir=TMPDIR.name)
+    )
+
 
 def _replace_pattern_in_logs(pattern: str, replacement: str, logfiles: [str]):
     for logfile in logfiles:
