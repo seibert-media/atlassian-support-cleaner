@@ -126,7 +126,7 @@ def _clean_logs(baseurl: str):
     input(
         'Automatic cleaning finished. The extracted files are available at {tmpdir}.'
         'If you like, you can cleanup additional things manually or check how the files look like.\n'
-        'Press Enter to proceed.'
+        'Press Enter to proceed.\n'
         ''.format(tmpdir=TMPDIR.name)
     )
 

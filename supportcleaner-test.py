@@ -3,10 +3,6 @@
 from supportcleaner import add_unit_prefix, remove_unit_prefix
 
 
-def test_list_files_in_dir():
-    pass
-
-
 def test_add_unit_prefix():
     assert add_unit_prefix(2048) == '2.0KiB'
     assert add_unit_prefix(2376582746591, 'V') == '2.2TiV'
