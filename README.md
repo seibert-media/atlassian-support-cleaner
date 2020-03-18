@@ -21,6 +21,9 @@ Usage
 
 **./supportcleaner.py** _SUPPORT_ZIP_ _BASEURL_
 
+Environment
+---
+**MAX_TMP_DIR_SIZE**: Set maximum allowed size in bytes of temporary directory for extraction.
 
 Example
 ---

@@ -15,7 +15,7 @@ LOGDIRS = [
     '.',
 ]
 
-MAX_TMP_DIR_SIZE = (200 * 1024 * 1024)
+MAX_TMP_DIR_SIZE = int(os.getenv('MAX_TMP_DIR_SIZE', (200 * 1024 * 1024)))
 
 TMPDIR = TemporaryDirectory()
 
@@ -100,7 +100,7 @@ def _extract_zip(supportzip: str):
         try:
             MAX_TMP_DIR_SIZE, _ = remove_unit_prefix(answer)
             print('Changed MAX_TMP_DIR_SIZE to {}\n'.format(answer))
-        except AttributeError:
+        except (AttributeError, TypeError):
             print('Input leads to an error: Please enter something like "30MiB"')
 
     zipf.extractall(TMPDIR.name)
