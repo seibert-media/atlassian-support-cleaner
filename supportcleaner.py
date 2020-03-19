@@ -77,33 +77,31 @@ def _prepare():
 
 def _extract_zip(supportzip: str):
     global MAX_TMP_DIR_SIZE
-    zipf = zipfile.ZipFile(supportzip, 'r')
-    uncompressed_size = _get_uncompressed_size(zipf)
-    while uncompressed_size > MAX_TMP_DIR_SIZE:
-        print('\nWARNING: Decompressed size of {uncomp} exceeds allowed MAX_TMP_DIR_SIZE of {max_size}.'.format(
-            uncomp=add_unit_prefix(uncompressed_size),
-            max_size=add_unit_prefix(MAX_TMP_DIR_SIZE),
-        ))
-        answer = input(
-            'Free disk space: {free_space}\n\n'
-            'Change MAX_TMP_DIR_SIZE to:\n'
-            '(Enter value in bytes, prefixes are allowed (KiB, MiB, GiB, ...); a to abort)\n'
-            ''.format(free_space=add_unit_prefix(get_free_disk_space(TMPDIR.name)))
-        )
+    with zipfile.ZipFile(supportzip, 'r') as zipf:
+        uncompressed_size = _get_uncompressed_size(zipf)
+        while uncompressed_size > MAX_TMP_DIR_SIZE:
+            print('\nWARNING: Decompressed size of {uncomp} exceeds allowed MAX_TMP_DIR_SIZE of {max_size}.'.format(
+                uncomp=add_unit_prefix(uncompressed_size),
+                max_size=add_unit_prefix(MAX_TMP_DIR_SIZE),
+            ))
+            answer = input(
+                'Free disk space: {free_space}\n\n'
+                'Change MAX_TMP_DIR_SIZE to:\n'
+                '(Enter value in bytes, prefixes are allowed (KiB, MiB, GiB, ...); a to abort)\n'
+                ''.format(free_space=add_unit_prefix(get_free_disk_space(TMPDIR.name)))
+            )
 
-        if answer == 'a':
-            zipf.close()
-            print('Aborted by user.')
-            exit()
+            if answer == 'a':
+                print('Aborted by user.')
+                exit()
 
-        try:
-            MAX_TMP_DIR_SIZE, _ = remove_unit_prefix(answer)
-            print('Changed MAX_TMP_DIR_SIZE to {}\n'.format(answer))
-        except AttributeError:
-            print('Input leads to an error: Please enter something like "30MiB"')
+            try:
+                MAX_TMP_DIR_SIZE, _ = remove_unit_prefix(answer)
+                print('Changed MAX_TMP_DIR_SIZE to {}\n'.format(answer))
+            except AttributeError:
+                print('Input leads to an error: Please enter something like "30MiB"')
 
-    zipf.extractall(TMPDIR.name)
-    zipf.close()
+        zipf.extractall(TMPDIR.name)
 
 
 def _get_uncompressed_size(zipf: zipfile.ZIP_DEFLATED):
