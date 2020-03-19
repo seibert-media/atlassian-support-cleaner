@@ -19,7 +19,7 @@ Python &ge; 3.5
 Usage
 --- 
 
-**./supportcleaner.py** _SUPPORT_ZIP_ _BASEURL_
+**./supportcleaner.py** _SUPPORT_ZIP_ _BASEURL_ [--filterfile _FILTER_FILE_]
 
 Environment
 ---
@@ -45,6 +45,10 @@ This tool does cleaning the support zip by
 
 (_NAME_WITHOUT_SPACE_ matches on all not white space characters)
 
+- you can add additional filters by using the filterfile argument, which takes a filepath:
+  - each line of the file is treated as one filter
+  - each filter is splitted by "||" in two parts
+  - first: search pattern (Python regex), second: replacement
 - creating new zip named "**cleaned.zip**" (if already existing, it will be deleted at program start)
 
 Notes
