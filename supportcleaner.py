@@ -104,7 +104,7 @@ def _extract_zip(supportzip: str):
         zipf.extractall(TMPDIR.name)
 
 
-def _get_uncompressed_size(zipf: zipfile.ZIP_DEFLATED):
+def _get_uncompressed_size(zipf: zipfile.ZIP_DEFLATED) -> int:
     size = 0
     for file in zipf.infolist():
         size += file.file_size
