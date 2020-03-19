@@ -19,11 +19,12 @@ Python &ge; 3.5
 Usage
 --- 
 
-**./supportcleaner.py** _SUPPORT_ZIP_ _BASEURL_
+**./supportcleaner.py** _SUPPORT_ZIP_ _BASEURL_ [--delete-oldest] [--delete-largest]
 
 Environment
 ---
 **MAX_TMP_DIR_SIZE**: Set maximum allowed size in bytes of temporary directory for extraction.
+**DELETE_AFTER_DAYS**: Set maximum age for files, after which they should be flagged for deletion.
 
 Example
 ---
@@ -44,6 +45,10 @@ This tool does cleaning the support zip by
 |userName: _NAME_WITHOUT_SPACE_|userName: USERNAME_CLEANED|
 
 (_NAME_WITHOUT_SPACE_ matches on all not white space characters)
+
+- remove files that are older than DELETE_AFTER_DAYS (default: 180) days (if --delete-oldest is set)
+
+- remove files that are within the LARGEST_PERCENT of files (default: largest 10%) (if --delete-largest is set)
 
 - creating new zip named "**cleaned.zip**" (if already existing, it will be deleted at program start)
 
