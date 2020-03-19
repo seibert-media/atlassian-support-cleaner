@@ -19,13 +19,16 @@ Python &ge; 3.5
 Usage
 --- 
 
-**./supportcleaner** _SUPPORT_ZIP_ _BASEURL_
+**./supportcleaner.py** _SUPPORT_ZIP_ _BASEURL_
 
+Environment
+---
+**MAX_TMP_DIR_SIZE**: Set maximum allowed size in bytes of temporary directory for extraction.
 
 Example
 ---
 ```bash
-./supportcleaner Confluence_support_2019-02-14-11-43-28.zip my-base-url.net
+./supportcleaner.py Confluence_support_2019-02-14-11-43-28.zip my-base-url.net
 ```
 
 How it works
@@ -57,4 +60,4 @@ Please be aware, that this tool cannot garantee to cleanup all personal informat
 License
 ---
 
-MIT &copy; 2019 //SEIBERT/MEDIA GmbH
+MIT &copy; 2019-2020 //SEIBERT/MEDIA GmbH
