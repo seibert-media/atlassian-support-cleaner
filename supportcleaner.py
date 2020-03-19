@@ -67,6 +67,10 @@ def _arguments() -> argparse.Namespace:
         help='Base-URL of the corresponding system',
     )
     parser.add_argument(
+        '--filterfile',
+        help='read additional filters from textfile',
+    )
+    parser.add_argument(
         '--delete-oldest',
         help='Delete files that are older than 180 days',
         action='store_true',
@@ -123,7 +127,14 @@ def _get_uncompressed_size(zipf: zipfile.ZIP_DEFLATED) -> int:
     return size
 
 
-def _clean_logs(baseurl: str):
+def _get_additional_filters(filterfile: str):
+    if filterfile:
+        with open(filterfile) as file:
+            return [line.strip() for line in file.readlines()]
+    return []
+
+
+def _clean_logs(baseurl: str, additional_filters: List[str]):
     for logdir in LOGDIRS:
         logfiles = _list_files_in_dir('{tmpdir}/{logdir}'.format(tmpdir=TMPDIR.name, logdir=logdir))
         _replace_pattern_in_logs(  # Clean URL
@@ -136,6 +147,17 @@ def _clean_logs(baseurl: str):
             replacement='userName: USERNAME_CLEANED',
             logfiles=logfiles,
         )
+        for additional_filter in additional_filters:
+            try:
+                pattern, replacement = additional_filter.split('||')
+            except ValueError:
+                print('"{}" is no valid filter string'.format(additional_filter))
+                continue
+            _replace_pattern_in_logs(
+                pattern=pattern,
+                replacement=replacement,
+                logfiles=logfiles,
+            )
     _clean_maillogs()
     _clean_manual()
 
@@ -229,6 +251,7 @@ def _collect_largest_files() -> List[Tuple[str, int]]:
 
 
 def _replace_pattern_in_logs(pattern: str, replacement: str, logfiles: List[str]):
+    print('-- pattern: "{}" --'.format(pattern))
     for logfile in logfiles:
         with open(logfile, 'r') as file:
             logcontent = file.read()
@@ -319,7 +342,7 @@ if __name__ == '__main__':
             _remove_large_files()
 
         print('Clean unwanted information:')
-        _clean_logs(baseurl=args.baseurl)
+        _clean_logs(baseurl=args.baseurl, additional_filters=_get_additional_filters(args.filterfile))
 
         print('Create cleaned.zip')
         _create_cleaned_zip()

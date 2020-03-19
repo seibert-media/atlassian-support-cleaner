@@ -19,7 +19,7 @@ Python &ge; 3.5
 Usage
 --- 
 
-**./supportcleaner.py** _SUPPORT_ZIP_ _BASEURL_ [--delete-oldest] [--delete-largest]
+**./supportcleaner.py** _SUPPORT_ZIP_ _BASEURL_ [--filterfile _FILTER_FILE_] [--delete-oldest] [--delete-largest]
 
 Environment
 ---
@@ -49,6 +49,11 @@ This tool does cleaning the support zip by
 - remove files that are older than DELETE_AFTER_DAYS (default: 180) days (if --delete-oldest is set)
 
 - remove files that are within the LARGEST_PERCENT of files (default: largest 10%) (if --delete-largest is set)
+
+- you can add additional filters by using the filterfile argument, which takes a filepath:
+  - each line of the file is treated as one filter
+  - each filter is splitted by "||" in two parts
+  - first: search pattern (Python regex), second: replacement
 
 - creating new zip named "**cleaned.zip**" (if already existing, it will be deleted at program start)
 
