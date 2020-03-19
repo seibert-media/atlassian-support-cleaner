@@ -4,6 +4,7 @@ import argparse
 import os
 import re
 import sys
+import shutil
 import zipfile
 
 from pathlib import Path
@@ -47,8 +48,8 @@ def remove_unit_prefix(numstr: str) -> (float, str):
 
 
 def get_free_disk_space(path: str):
-    s = os.statvfs(path)
-    return s.f_frsize * s.f_bavail
+    total, used, free = shutil.disk_usage(path)
+    return free
 
 
 def _arguments() -> argparse.Namespace:
