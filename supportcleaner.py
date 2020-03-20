@@ -35,7 +35,7 @@ def add_unit_prefix(num: float, unit='B') -> str:
     return "%.1f%s%s" % (num, 'Yi', unit)
 
 
-def remove_unit_prefix(numstr: str) -> (float, str):
+def remove_unit_prefix(numstr: str) -> Tuple[float, str]:
     num, prefix, unit = re.match(pattern=r'(\d+\.?\d*)\s?([KMGTPEZY]i)?(.*)', string=numstr).groups()
     num = float(num)
 
@@ -127,7 +127,7 @@ def _get_uncompressed_size(zipf: zipfile.ZIP_DEFLATED) -> int:
     return size
 
 
-def _get_additional_filters(filterfile: str):
+def _get_additional_filters(filterfile: str) -> List[str]:
     if filterfile:
         with open(filterfile) as file:
             return [line.strip() for line in file.readlines()]
@@ -187,7 +187,7 @@ def _remove_old_files(supportzip: str):
             break
 
 
-def _set_new_age_limit(supportzip):
+def _set_new_age_limit(supportzip: str):
     # set new timeframe or skip
     global DELETE_AFTER_DAYS
     while True:
@@ -300,7 +300,7 @@ def _zip_dir(ziph: zipfile.ZipFile):
         ziph.write(filename=file, arcname=str(Path(file).relative_to(TMPDIR.name)))
 
 
-def _list_files_in_dir(path: str, pattern='.*') -> [str]:
+def _list_files_in_dir(path: str, pattern='.*') -> List[str]:
     filelist = []
     for root, dirs, files in os.walk(path):
         for file in files:
