@@ -24,6 +24,8 @@ if sys.version_info < (3, 5):
     raise Exception('Python in version 3.5 or higher is required to run this tool.')
 
 
+#  1 HELPER FUNCTIONS
+
 def add_unit_prefix(num: float, unit='B') -> str:
     """
     source: https://stackoverflow.com/questions/1094841/reusable-library-to-get-human-readable-version-of-file-size
@@ -50,9 +52,11 @@ def remove_unit_prefix(numstr: str) -> (float, str):
 
 
 def get_free_disk_space(path: str):
-    total, used, free = shutil.disk_usage(path)
+    _, _, free = shutil.disk_usage(path)
     return free
 
+
+#  2 PREPARATION & EXTRACTION
 
 def _arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -69,16 +73,6 @@ def _arguments() -> argparse.Namespace:
     parser.add_argument(
         '--filterfile',
         help='read additional filters from textfile',
-    )
-    parser.add_argument(
-        '--delete-oldest',
-        help='Delete files that are older than 180 days',
-        action='store_true',
-    )
-    parser.add_argument(
-        '--delete-largest',
-        help='Delete the largest files from the archive to save space',
-        action='store_true',
     )
     return parser.parse_args()
 
@@ -127,12 +121,101 @@ def _get_uncompressed_size(zipf: zipfile.ZIP_DEFLATED) -> int:
     return size
 
 
-def _get_additional_filters(filterfile: str):
-    if filterfile:
-        with open(filterfile) as file:
-            return [line.strip() for line in file.readlines()]
-    return []
+#  3 DELETE UNWANTED LOGS
 
+#  3.1 OLD FILES
+
+def _remove_old_files(supportzip: str):
+    delete_timedelta = timedelta(days=DELETE_AFTER_DAYS)
+
+    old_files = _collect_old_files(supportzip, delete_timedelta)
+    _print_old_files(old_files, delete_timedelta)
+
+    delete = input('\nDo you want to delete them? (y/n)')
+    while True:
+        if delete == 'y':
+            print('Deleting old files\n')
+            for file, _ in old_files:
+                os.remove('{dir}/{file}'.format(dir=TMPDIR.name, file=file))
+            break
+        elif delete == 'n':
+            _set_new_age_limit(supportzip)
+            break
+
+
+def _collect_old_files(supportzip: str, delete_timedelta: timedelta) -> List[Tuple[str, datetime]]:
+    old_files = []
+    with zipfile.ZipFile(supportzip, 'r') as zipf:
+        for file in zipf.infolist():
+            name, (year, month, day, hours, minutes, seconds) = file.filename, file.date_time
+            date_time = datetime(year=year, month=month, day=day, hour=hours, minute=minutes, second=seconds)
+            if datetime.now() - date_time > delete_timedelta:
+                old_files.append((name, date_time))
+    return old_files
+
+
+def _print_old_files(old_files: List[Tuple[str, datetime]], delete_timedelta: timedelta):
+    print('The following files are older than {} days:\n'.format(delete_timedelta.days))
+    print('Filename: \t\t\t\tModified')
+    for path, modified in old_files:
+        print('{path}: {modified}'.format(path=path, modified=modified))
+
+
+def _set_new_age_limit(supportzip):
+    # set new timeframe or skip
+    global DELETE_AFTER_DAYS
+    while True:
+        limit = input('\nChoose a new limit in days to delete old files (leave empty to skip)\n'
+                      'Old limit: {} days\n'.format(DELETE_AFTER_DAYS))
+        if limit:
+            try:
+                DELETE_AFTER_DAYS = int(limit)
+                _remove_old_files(supportzip=supportzip)
+                break
+            except ValueError:
+                print('Your input needs to be an integer.')
+        else:
+            print('Skipping deletion of old files\n')
+            break
+
+
+#  3.2 BIG FILES
+
+def _remove_large_files():
+    large_files = _collect_largest_files()
+    _print_largest_files(large_files)
+
+    while True:
+        delete = input('\nDo you want to delete those files? (y/n)\n')
+        if delete == 'y':
+            print('Deleting largest files\n')
+            for file, _ in large_files:
+                os.remove(file)
+            break
+        elif delete == 'n':
+            break
+
+
+def _collect_largest_files() -> List[Tuple[str, int]]:
+    logfiles = _list_files_in_dir(TMPDIR.name)
+    file_sizes = []
+    for file in logfiles:
+        file_sizes.append((file, os.stat(file).st_size))
+    # sort files by size
+    file_sizes.sort(key=lambda x: x[1])
+    # select files which are in the LARGEST_PERCENT of files
+    n_small_files = int(len(file_sizes) * (1 - LARGEST_PERCENT / 100))
+    large_files = file_sizes[n_small_files:]
+    return large_files
+
+
+def _print_largest_files(large_files):
+    print('Largest {}%:'.format(LARGEST_PERCENT))
+    for file, size in large_files:
+        print('{file}: {size}'.format(file=file, size=add_unit_prefix(size)))
+
+
+#  4 CLEAN LOGS
 
 def _clean_logs(baseurl: str, additional_filters: List[str]):
     for logdir in LOGDIRS:
@@ -162,92 +245,11 @@ def _clean_logs(baseurl: str, additional_filters: List[str]):
     _clean_manual()
 
 
-def _print_old_files(old_files: List[Tuple[str, datetime]], delete_timedelta: timedelta):
-    print(f'The following files are older than {delete_timedelta.days} days:\n')
-    print('Filename: \t\t\t\tModified')
-    for path, modified in old_files:
-        print(f'{path}: {modified}')
-
-
-def _remove_old_files(supportzip: str):
-    delete_timedelta = timedelta(days=DELETE_AFTER_DAYS)
-
-    old_files = _collect_old_files(supportzip, delete_timedelta)
-    _print_old_files(old_files, delete_timedelta)
-
-    delete = input('\nDo you want to delete them? (y/n)')
-    while True:
-        if delete == 'y':
-            print('Deleting old files\n')
-            for file, _ in old_files:
-                os.remove(f'{TMPDIR.name}/{file}')
-            break
-        elif delete == 'n':
-            _set_new_age_limit(supportzip)
-            break
-
-
-def _set_new_age_limit(supportzip):
-    # set new timeframe or skip
-    global DELETE_AFTER_DAYS
-    while True:
-        limit = input('\nChoose a new limit in days to delete old files (leave empty to skip)\n'
-                      f'Old limit: {DELETE_AFTER_DAYS} days\n')
-        if limit:
-            try:
-                DELETE_AFTER_DAYS = int(limit)
-                _remove_old_files(supportzip=supportzip)
-                break
-            except ValueError:
-                print('Your input needs to be an integer.')
-        else:
-            print('Skipping deletion of old files\n')
-            break
-
-
-def _collect_old_files(supportzip: str, delete_timedelta: timedelta) -> List[Tuple[str, datetime]]:
-    old_files = []
-    with zipfile.ZipFile(supportzip, 'r') as zipf:
-        for file in zipf.infolist():
-            name, (year, month, day, hours, minutes, seconds) = file.filename, file.date_time
-            date_time = datetime(year=year, month=month, day=day, hour=hours, minute=minutes, second=seconds)
-            if datetime.now() - date_time > delete_timedelta:
-                old_files.append((name, date_time))
-    return old_files
-
-
-def _remove_large_files():
-    large_files = _collect_largest_files()
-    _print_largest_files(large_files)
-
-    while True:
-        delete = input('\nDo you want to delete those files? (y/n)\n')
-        if delete == 'y':
-            print('Deleting largest files\n')
-            for file, _ in large_files:
-                os.remove(file)
-            break
-        elif delete == 'n':
-            break
-
-
-def _print_largest_files(large_files):
-    print(f'Largest {LARGEST_PERCENT}%:')
-    for file, size in large_files:
-        print(f'{file}: {add_unit_prefix(size)}')
-
-
-def _collect_largest_files() -> List[Tuple[str, int]]:
-    logfiles = _list_files_in_dir(TMPDIR.name)
-    file_sizes = []
-    for file in logfiles:
-        file_sizes.append((file, os.stat(file).st_size))
-    # sort files by size
-    file_sizes.sort(key=lambda x: x[1])
-    # select files which are in the LARGEST_PERCENT of files
-    n_small_files = int(len(file_sizes) * (1 - LARGEST_PERCENT / 100))
-    large_files = file_sizes[n_small_files:]
-    return large_files
+def _get_additional_filters(filterfile: str):
+    if filterfile:
+        with open(filterfile) as file:
+            return [line.strip() for line in file.readlines()]
+    return []
 
 
 def _replace_pattern_in_logs(pattern: str, replacement: str, logfiles: List[str]):
@@ -290,6 +292,8 @@ def _clean_manual():
     )
 
 
+#  5 CREATE CLEANED ZIP AND CLEANUP
+
 def _create_cleaned_zip():
     with zipfile.ZipFile('cleaned.zip', 'w', zipfile.ZIP_DEFLATED) as cleanedzip:
         _zip_dir(cleanedzip)
@@ -313,6 +317,8 @@ def _cleanup():
     TMPDIR.cleanup()
 
 
+# -- MAIN PROGRAM -- #
+
 MAX_TMP_DIR_SIZE, _ = remove_unit_prefix(os.getenv('MAX_TMP_DIR_SIZE', '200MiB'))
 
 DELETE_AFTER_DAYS = os.getenv('DELETE_AFTER_DAYS', 180)
@@ -333,13 +339,11 @@ if __name__ == '__main__':
         print('Extract support zip')
         _extract_zip(supportzip=args.supportzip)
 
-        if args.delete_oldest:
-            print('Remove old files')
-            _remove_old_files(supportzip=args.supportzip)
+        print('Remove old files')
+        _remove_old_files(supportzip=args.supportzip)
 
-        if args.delete_largest:
-            print('Remove largest files')
-            _remove_large_files()
+        print('Remove largest files')
+        _remove_large_files()
 
         print('Clean unwanted information:')
         _clean_logs(baseurl=args.baseurl, additional_filters=_get_additional_filters(args.filterfile))
