@@ -4,11 +4,13 @@ import argparse
 import os
 import re
 import sys
+import shutil
 import zipfile
 
+from datetime import datetime, timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import List
+from typing import List, Tuple, Any
 
 # All files in the defined directories and all subdirectories will be cleaned.
 # Setting this to '.' or '/' will cause the tool to clean all existing files in the zip.
@@ -22,6 +24,8 @@ if sys.version_info < (3, 5):
     raise Exception('Python in version 3.5 or higher is required to run this tool.')
 
 
+#  1 HELPER FUNCTIONS
+
 def add_unit_prefix(num: float, unit='B') -> str:
     """
     source: https://stackoverflow.com/questions/1094841/reusable-library-to-get-human-readable-version-of-file-size
@@ -33,7 +37,7 @@ def add_unit_prefix(num: float, unit='B') -> str:
     return "%.1f%s%s" % (num, 'Yi', unit)
 
 
-def remove_unit_prefix(numstr: str) -> (float, str):
+def remove_unit_prefix(numstr: str) -> Tuple[float, str]:
     num, prefix, unit = re.match(pattern=r'(\d+\.?\d*)\s?([KMGTPEZY]i)?(.*)', string=numstr).groups()
     num = float(num)
 
@@ -47,10 +51,31 @@ def remove_unit_prefix(numstr: str) -> (float, str):
             num *= 1024
 
 
-def get_free_disk_space(path: str):
-    s = os.statvfs(path)
-    return s.f_frsize * s.f_bavail
+def get_free_disk_space(path: str) -> int:
+    _, _, free = shutil.disk_usage(path)
+    return free
 
+
+def print_files(files: List[Tuple[str, Any]], intro: str):
+    print(intro)
+    for path, value in files:
+        path = Path(path).relative_to(TMPDIR.name)
+        print('{path}: {value}'.format(path=path, value=value))
+
+
+def delete_files(files: List[Tuple[str, Any]], message: str):
+    while True:
+        delete = input('\nDo you want to delete them? (y/n)')
+        if delete == 'y':
+            print(message)
+            for file, _ in files:
+                os.remove(file)
+            break
+        elif delete == 'n':
+            break
+
+
+#  2 PREPARATION & EXTRACTION
 
 def _arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -81,48 +106,113 @@ def _prepare():
 
 def _extract_zip(supportzip: str):
     global MAX_TMP_DIR_SIZE
-    zipf = zipfile.ZipFile(supportzip, 'r')
-    uncompressed_size = _get_uncompressed_size(zipf)
-    while uncompressed_size > MAX_TMP_DIR_SIZE:
-        print('\nWARNING: Decompressed size of {uncomp} exceeds allowed MAX_TMP_DIR_SIZE of {max_size}.'.format(
-            uncomp=add_unit_prefix(uncompressed_size),
-            max_size=add_unit_prefix(MAX_TMP_DIR_SIZE),
-        ))
-        answer = input(
-            'Free disk space: {free_space}\n\n'
-            'Change MAX_TMP_DIR_SIZE to:\n'
-            '(Enter value in bytes, prefixes are allowed (KiB, MiB, GiB, ...); a to abort)\n'
-            ''.format(free_space=add_unit_prefix(get_free_disk_space(TMPDIR.name)))
-        )
+    with zipfile.ZipFile(supportzip, 'r') as zipf:
+        uncompressed_size = _get_uncompressed_size(zipf)
+        while uncompressed_size > MAX_TMP_DIR_SIZE:
+            print('\nWARNING: Decompressed size of {uncomp} exceeds allowed MAX_TMP_DIR_SIZE of {max_size}.'.format(
+                uncomp=add_unit_prefix(uncompressed_size),
+                max_size=add_unit_prefix(MAX_TMP_DIR_SIZE),
+            ))
+            answer = input(
+                'Free disk space: {free_space}\n\n'
+                'Change MAX_TMP_DIR_SIZE to:\n'
+                '(Enter value in bytes, prefixes are allowed (KiB, MiB, GiB, ...); a to abort)\n'
+                ''.format(free_space=add_unit_prefix(get_free_disk_space(TMPDIR.name)))
+            )
 
-        if answer == 'a':
-            zipf.close()
-            print('Aborted by user.')
-            exit()
+            if answer == 'a':
+                print('Aborted by user.')
+                exit()
 
-        try:
-            MAX_TMP_DIR_SIZE, _ = remove_unit_prefix(answer)
-            print('Changed MAX_TMP_DIR_SIZE to {}\n'.format(answer))
-        except AttributeError:
-            print('Input leads to an error: Please enter something like "30MiB"')
+            try:
+                MAX_TMP_DIR_SIZE, _ = remove_unit_prefix(answer)
+                print('Changed MAX_TMP_DIR_SIZE to {}\n'.format(answer))
+            except AttributeError:
+                print('Input leads to an error: Please enter something like "30MiB"')
 
-    zipf.extractall(TMPDIR.name)
-    zipf.close()
+        zipf.extractall(TMPDIR.name)
 
 
-def _get_uncompressed_size(zipf: zipfile.ZIP_DEFLATED):
+def _get_uncompressed_size(zipf: zipfile.ZIP_DEFLATED) -> int:
     size = 0
     for file in zipf.infolist():
         size += file.file_size
     return size
 
 
-def _get_additional_filters(filterfile: str):
-    if filterfile:
-        with open(filterfile) as file:
-            return [line.strip() for line in file.readlines()]
-    return []
+#  3 DELETE UNWANTED LOGS
 
+#  3.1 OLD FILES
+
+def _remove_old_files(supportzip: str):
+    limit = _set_age_limit()
+    if not limit:
+        return
+
+    delete_timedelta = timedelta(days=limit)
+
+    old_files = _collect_old_files(supportzip, delete_timedelta)
+    print_files(files=old_files, intro='The following files are older than {} days:\n'.format(delete_timedelta.days))
+    delete_files(files=old_files, message='Deleting old files\n')
+
+
+def _collect_old_files(supportzip: str, delete_timedelta: timedelta) -> List[Tuple[str, datetime]]:
+    old_files = []
+    with zipfile.ZipFile(supportzip, 'r') as zipf:
+        for file in zipf.infolist():
+            name = '{tmpdir}/{rel_path}'.format(tmpdir=TMPDIR.name, rel_path=file.filename)
+            (year, month, day, hours, minutes, seconds) = file.date_time
+            date_time = datetime(year=year, month=month, day=day, hour=hours, minute=minutes, second=seconds)
+            if datetime.now() - date_time > delete_timedelta:
+                old_files.append((name, date_time))
+    return old_files
+
+
+def _set_age_limit() -> int:
+    if os.getenv('DELETE_AFTER_DAYS'):
+        return int(os.getenv('DELETE_AFTER_DAYS'))
+    while True:
+        limit = input('\nChoose a limit in days to delete old files (leave empty to skip)\n')
+        if limit:
+            try:
+                return int(limit)
+            except ValueError:
+                print('Your input needs to be an integer.')
+        else:
+            break
+
+
+#  3.2 BIG FILES
+
+def _remove_large_files():
+    large_files = _collect_largest_files()
+    print_files(files=large_files, intro='Largest {}%:'.format(LARGEST_PERCENT))
+    delete_files(files=large_files, message='Deleting largest files\n')
+
+
+def _collect_largest_files() -> List[Tuple[str, str]]:
+    logfiles = _list_files_in_dir(TMPDIR.name)
+    file_sizes = []
+    for file in logfiles:
+        file_sizes.append((file, os.stat(file).st_size))
+    # sort files by size
+    file_sizes.sort(key=lambda x: x[1])
+    # select files which are in the LARGEST_PERCENT of files
+    n_small_files = int(len(file_sizes) * (1 - LARGEST_PERCENT / 100))
+    large_files = file_sizes[n_small_files:]
+    return [(path, add_unit_prefix(size)) for (path, size) in large_files]
+
+
+#  3.3 MAIL LOGS
+
+def _remove_maillogs():
+    file_list = _list_files_in_dir(TMPDIR.name, pattern=r'.*(incoming|outgoing)-mail\.log')
+    mail_log_files = [(file, '') for file in file_list]
+    print_files(files=mail_log_files, intro='\nFound following mail log files:')
+    delete_files(files=mail_log_files, message='Deleting mail log files\n')
+
+
+#  4 CLEAN LOGS
 
 def _clean_logs(baseurl: str, additional_filters: List[str]):
     for logdir in LOGDIRS:
@@ -148,11 +238,16 @@ def _clean_logs(baseurl: str, additional_filters: List[str]):
                 replacement=replacement,
                 logfiles=logfiles,
             )
-    _clean_maillogs()
-    _clean_manual()
 
 
-def _replace_pattern_in_logs(pattern: str, replacement: str, logfiles: [str]):
+def _get_additional_filters(filterfile: str) -> List[str]:
+    if filterfile:
+        with open(filterfile) as file:
+            return [line.strip() for line in file.readlines()]
+    return []
+
+
+def _replace_pattern_in_logs(pattern: str, replacement: str, logfiles: List[str]):
     print('-- pattern: "{}" --'.format(pattern))
     for logfile in logfiles:
         with open(logfile, 'r') as file:
@@ -168,21 +263,6 @@ def _replace_pattern_in_logs(pattern: str, replacement: str, logfiles: [str]):
             file.write(logcontent)
 
 
-def _clean_maillogs():
-    maillogfiles = _list_files_in_dir(TMPDIR.name, pattern=r'.*(incoming|outgoing)-mail\.log')
-    print('\nFound following mail log files:')
-    for file in maillogfiles:
-        print(Path(file).relative_to(TMPDIR.name))
-    while True:
-        answer = input('\nDelete mail log files? (y/n)')
-        if answer == 'y':
-            for file in maillogfiles:
-                os.remove(file)
-            break
-        if answer == 'n':
-            break
-
-
 def _clean_manual():
     input(
         '\nAutomatic cleaning finished. The extracted files are available at {tmpdir}. '
@@ -191,6 +271,8 @@ def _clean_manual():
         ''.format(tmpdir=TMPDIR.name)
     )
 
+
+#  5 CREATE CLEANED ZIP AND CLEANUP
 
 def _create_cleaned_zip():
     with zipfile.ZipFile('cleaned.zip', 'w', zipfile.ZIP_DEFLATED) as cleanedzip:
@@ -202,7 +284,7 @@ def _zip_dir(ziph: zipfile.ZipFile):
         ziph.write(filename=file, arcname=str(Path(file).relative_to(TMPDIR.name)))
 
 
-def _list_files_in_dir(path: str, pattern='.*') -> [str]:
+def _list_files_in_dir(path: str, pattern='.*') -> List[str]:
     filelist = []
     for root, dirs, files in os.walk(path):
         for file in files:
@@ -215,7 +297,12 @@ def _cleanup():
     TMPDIR.cleanup()
 
 
+# -- MAIN PROGRAM -- #
+
 MAX_TMP_DIR_SIZE, _ = remove_unit_prefix(os.getenv('MAX_TMP_DIR_SIZE', '200MiB'))
+
+# files that are in the LARGEST_PERCENTage are flagged for automatic deletion
+LARGEST_PERCENT = 10
 
 if __name__ == '__main__':
     args = _arguments()
@@ -227,13 +314,24 @@ if __name__ == '__main__':
     try:
         _prepare()
 
-        print('Extract support zip')
+        print('\nExtract support zip')
         _extract_zip(supportzip=args.supportzip)
 
-        print('Clean unwanted information:')
+        print('\nRemove old files')
+        _remove_old_files(supportzip=args.supportzip)
+
+        print('\nRemove largest files')
+        _remove_large_files()
+
+        print('\nRemove mail logs')
+        _remove_maillogs()
+
+        print('\nClean unwanted information:')
         _clean_logs(baseurl=args.baseurl, additional_filters=_get_additional_filters(args.filterfile))
 
-        print('Create cleaned.zip')
+        _clean_manual()
+
+        print('\nCreate cleaned.zip')
         _create_cleaned_zip()
     finally:
         _cleanup()
