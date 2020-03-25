@@ -243,7 +243,7 @@ def _clean_logs(baseurl: str, additional_filters: List[str]):
 def _get_additional_filters(filterfile: str) -> List[str]:
     if filterfile:
         with open(filterfile) as file:
-            return [line.strip() for line in file.readlines()]
+            return [line.strip() for line in file.readlines() if not line.startswith('#')]
     return []
 
 
