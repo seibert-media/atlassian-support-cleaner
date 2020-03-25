@@ -51,7 +51,7 @@ def remove_unit_prefix(numstr: str) -> Tuple[float, str]:
             num *= 1024
 
 
-def get_free_disk_space(path: str):
+def get_free_disk_space(path: str) -> int:
     _, _, free = shutil.disk_usage(path)
     return free
 
@@ -240,7 +240,7 @@ def _clean_logs(baseurl: str, additional_filters: List[str]):
             )
 
 
-def _get_additional_filters(filterfile: str):
+def _get_additional_filters(filterfile: str) -> List[str]:
     if filterfile:
         with open(filterfile) as file:
             return [line.strip() for line in file.readlines()]
