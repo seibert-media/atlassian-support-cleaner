@@ -218,7 +218,7 @@ def _clean_logs(baseurl: str, additional_filters: List[str]):
     for logdir in LOGDIRS:
         logfiles = _list_files_in_dir('{tmpdir}/{logdir}'.format(tmpdir=TMPDIR.name, logdir=logdir))
         _replace_pattern_in_logs(  # Clean URL
-            pattern='[A-Za-z0-9.-]*{baseurl}'.format(baseurl=re.escape(baseurl)),
+            pattern='[A-Za-z0-9.-]*{baseurl}/?'.format(baseurl=re.escape(baseurl)),
             replacement='URL_CLEANED',
             logfiles=logfiles,
         )
