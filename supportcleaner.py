@@ -212,7 +212,28 @@ def _remove_maillogs():
     delete_files(files=mail_log_files, message='Deleting mail log files\n')
 
 
-#  4 CLEAN LOGS
+# 4 CHECK LOGLEVEL
+
+def _check_loglevel():
+    regex_loglevel = r'^(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}(,|.)\d{1,3})\s.*?\s(INFO|DEBUG)'
+    for logdir in LOGDIRS:
+        logfiles = _list_files_in_dir('{tmpdir}/{logdir}'.format(tmpdir=TMPDIR.name, logdir=logdir))
+        for logfile in logfiles:
+            with open(logfile, 'r') as file:
+                logcontent = file.read()
+                if re.match(regex_loglevel, logcontent) is not None:
+                    input(
+                        '{boundary}'
+                        'Logmessages with level INFO or DEBUG have been detected!\n'
+                        'Please consider using a stricter loglevel to avoid exposing too much sensitive information.\n'
+                        'If this is not possible, take extra care to remove any sensitive information from the logs.\n'
+                        '{boundary}'
+                        'Press Enter to proceed.\n'.format(boundary=90 * '#' + '\n')
+                    )
+                    return
+
+
+#  5 CLEAN LOGS
 
 def _clean_logs(baseurl: str, additional_filters: List[str]):
     for logdir in LOGDIRS:
@@ -265,14 +286,18 @@ def _replace_pattern_in_logs(pattern: str, replacement: str, logfiles: List[str]
 
 def _clean_manual():
     input(
-        '\nAutomatic cleaning finished. The extracted files are available at {tmpdir}. '
-        'If you like, you can cleanup additional things manually or check how the files look like.\n'
+        '\nAutomatic cleaning finished. The extracted files are available at {tmpdir}. \n'
+        '\n################################################################################\n'
+        'These filters won\'t have cleaned everything perfectly from the logs!\n'
+        'Especially usernames and names of people or businesses may still be present.\n'
+        '################################################################################\n'
+        '\nYou can cleanup additional things manually or check how the files look like.\n'
         'Press Enter to proceed.\n'
         ''.format(tmpdir=TMPDIR.name)
     )
 
 
-#  5 CREATE CLEANED ZIP AND CLEANUP
+#  6 CREATE CLEANED ZIP AND CLEANUP
 
 def _create_cleaned_zip():
     with zipfile.ZipFile('cleaned.zip', 'w', zipfile.ZIP_DEFLATED) as cleanedzip:
@@ -325,6 +350,9 @@ if __name__ == '__main__':
 
         print('\nRemove mail logs')
         _remove_maillogs()
+
+        print('\nCheck Loglevel')
+        _check_loglevel()
 
         print('\nClean unwanted information:')
         _clean_logs(baseurl=args.baseurl, additional_filters=_get_additional_filters(args.filterfile))
