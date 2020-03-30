@@ -9,7 +9,7 @@ userName: \\S+||userName: USERNAME_CLEANED
 # these match much faster, but are potentially less accurate
 [A-Za-z0-9._%+-]+(@|%40)[A-Za-z0-9.-]+\.[A-Za-z]{2,}||EXTERNAL_EMAIL_CLEANED
 [A-Za-z0-9._%+-]+(@|%40)URL_CLEANED||INTERNAL_EMAIL_CLEANED
-(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)||IP_CLEANED\2
+((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3})(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)||\1IP_CLEANED
 # \[\w+\d+\]||USERNAME_CLEANED
 \-{5}BEGIN .* PRIVATE KEY\-{5}.*\-{5}END .* PRIVATE KEY\-{5}||PRIVATE_KEY_CLEANED
 \-{5}BEGIN CERTIFICATE\-{5}.*\-{5}END CERTIFICATE\-{5}||CERTIFICATE_CLEANED
