@@ -16,7 +16,7 @@ userName: \\S+||userName: USERNAME_CLEANED
 [A-Za-z0-9._%+-]+(@|%40)URL_CLEANED||INTERNAL_EMAIL_CLEANED
 #
 # clean remaining internal smedia domains
-[A-Za-z0-9.-]*smhss.de||SMEDIA_DOMAIN_CLEANED
+[A-Za-z0-9.-]*\.smhss\.de||SMEDIA_DOMAIN_CLEANED
 #
 # clean the last byte of IP addresses
 ((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3})(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)||\1IP_CLEANED
