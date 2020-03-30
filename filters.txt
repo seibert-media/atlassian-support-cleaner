@@ -1,5 +1,7 @@
 # an octothorpe at the start marks a comment
-#
+# {baseurl} in search patterns will be replaced with the given baseurl
+userName: \\S+||userName: USERNAME_CLEANED
+[A-Za-z0-9.-]*{baseurl}/?||URL_CLEANED
 # these email replacements are very slow, due to the amount of arbitrary quantifiers needed, but match very thoroughly
 # (\w|\d)*?\S*(\w|\d)@(\d|\w|\-|\.)+\.\w+||EXTERNAL_EMAIL_CLEANED
 # (\w|\d)*?\S*(\w|\d)@URL_CLEANED||INTERNAL_EMAIL_CLEANED

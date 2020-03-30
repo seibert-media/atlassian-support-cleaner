@@ -19,6 +19,7 @@ LOGDIRS = [
 ]
 
 TMPDIR = TemporaryDirectory()
+SUPPORT_CLEANER_PATH = Path(__file__).parent.absolute()
 
 if sys.version_info < (3, 5):
     raise Exception('Python in version 3.5 or higher is required to run this tool.')
@@ -91,7 +92,8 @@ def _arguments() -> argparse.Namespace:
     )
     parser.add_argument(
         '--filterfile',
-        help='read additional filters from textfile',
+        help='read filters from textfile',
+        default='{support_cleaner_path}/filters.txt'.format(support_cleaner_path=SUPPORT_CLEANER_PATH)
     )
     return parser.parse_args()
 
@@ -235,24 +237,16 @@ def _check_loglevel():
 
 #  5 CLEAN LOGS
 
-def _clean_logs(baseurl: str, additional_filters: List[str]):
+def _clean_logs(baseurl: str, filters: List[str]):
     for logdir in LOGDIRS:
         logfiles = _list_files_in_dir('{tmpdir}/{logdir}'.format(tmpdir=TMPDIR.name, logdir=logdir))
-        _replace_pattern_in_logs(  # Clean URL
-            pattern='[A-Za-z0-9.-]*{baseurl}/?'.format(baseurl=re.escape(baseurl)),
-            replacement='URL_CLEANED',
-            logfiles=logfiles,
-        )
-        _replace_pattern_in_logs(  # Clean user names
-            pattern='userName: \\S+',
-            replacement='userName: USERNAME_CLEANED',
-            logfiles=logfiles,
-        )
-        for additional_filter in additional_filters:
+        for potential_filter in filters:
             try:
-                pattern, replacement = additional_filter.split('||')
+                pattern, replacement = potential_filter.split('||')
+                if '{baseurl}' in pattern:
+                    pattern = pattern.replace('{baseurl}', baseurl)
             except ValueError:
-                print('"{}" is no valid filter string'.format(additional_filter))
+                print('"{}" is no valid filter string'.format(potential_filter))
                 continue
             _replace_pattern_in_logs(
                 pattern=pattern,
@@ -261,11 +255,9 @@ def _clean_logs(baseurl: str, additional_filters: List[str]):
             )
 
 
-def _get_additional_filters(filterfile: str) -> List[str]:
-    if filterfile:
-        with open(filterfile) as file:
-            return [line.strip() for line in file.readlines() if not line.startswith('#')]
-    return []
+def _get_filters(filterfile: str) -> List[str]:
+    with open(filterfile) as file:
+        return [line.strip() for line in file.readlines() if not line.startswith('#')]
 
 
 def _replace_pattern_in_logs(pattern: str, replacement: str, logfiles: List[str]):
@@ -355,7 +347,7 @@ if __name__ == '__main__':
         _check_loglevel()
 
         print('\nClean unwanted information:')
-        _clean_logs(baseurl=args.baseurl, additional_filters=_get_additional_filters(args.filterfile))
+        _clean_logs(baseurl=args.baseurl, filters=_get_filters(args.filterfile))
 
         _clean_manual()
 
