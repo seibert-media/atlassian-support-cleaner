@@ -5,6 +5,7 @@
 # {hash} will cause the named capture group to be replaced with the first 10 chars of its SHA256 hash.
 # You can name the capture groups 'user', 'internal_email' and 'external_email', and the username or local part
 # of the email address will be hashed to allow for attributability.
+# If there is not capture groups with either of those names, the whole match will be hashed.
 # The replacement provided will be ignored, but for understandabilities sake you should define it like it's done below.
 #
 # Default filters:
@@ -38,7 +39,7 @@ userName: (?P<user>\S+)||USERNAME_{hash}_CLEANED
 # filters for businesses
 # for increased accuracy and speed, it's advisable to add the official business name as it's own filter
 # this generic filter can be used to filter out business affiliates
-# Caution! 
+# Caution!
 # This will match 1 to 3 words (no punctiation) before the business form, so it might remove words that it shouldn't
 # Examples where it would match:
 # Deutsche Bank AG, Google Inc, Business GmbH, Chaos Computer Club e.V., dbk KG
