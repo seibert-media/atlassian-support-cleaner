@@ -214,16 +214,18 @@ def _remove_maillogs():
     delete_files(files=mail_log_files, message='Deleting mail log files\n')
 
 
-# 4 CHECK LOGLEVEL
+#  4 CHECK LOGLEVEL
 
 def _check_loglevel():
+    # This regex matches the beginning of the standard atlassian logging format
+    # e.g. 2020-01-22 09:03:08,633 http-nio-8080-exec-55 INFO
     regex_loglevel = r'^(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}(,|.)\d{1,3})\s.*?\s(INFO|DEBUG)'
     for logdir in LOGDIRS:
         logfiles = _list_files_in_dir('{tmpdir}/{logdir}'.format(tmpdir=TMPDIR.name, logdir=logdir))
         for logfile in logfiles:
             with open(logfile, 'r') as file:
                 logcontent = file.read()
-                if re.match(regex_loglevel, logcontent) is not None:
+                if re.search(regex_loglevel, logcontent) is not None:
                     input(
                         '{boundary}'
                         'Logmessages with level INFO or DEBUG have been detected!\n'
@@ -282,7 +284,7 @@ def _clean_manual():
         '\n################################################################################\n'
         'These filters won\'t have cleaned everything perfectly from the logs!\n'
         'Especially usernames and names of people or businesses may still be present.\n'
-        '################################################################################\n'
+        '##################################################################################\n'
         '\nYou can cleanup additional things manually or check how the files look like.\n'
         'Press Enter to proceed.\n'
         ''.format(tmpdir=TMPDIR.name)
