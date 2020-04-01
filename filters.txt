@@ -38,6 +38,8 @@ userName: (?P<user>\S+)||USERNAME_{hash}_CLEANED
 # filters for businesses
 # for increased accuracy and speed, it's advisable to add the official business name as it's own filter
 # this generic filter can be used to filter out business affiliates
+# Caution! 
+# This will match 1 to 3 words (no punctiation) before the business form, so it might remove words that it shouldn't
 # Examples where it would match:
 # Deutsche Bank AG, Google Inc, Business GmbH, Chaos Computer Club e.V., dbk KG
 (\w+\s){1,3}(GmbH|AG|Co\. KG|KG|UG|KGaA|eG|LLC|Inc.|e\.\s?V\.)||BUSINESS_CLEANED
