@@ -2,8 +2,13 @@
 #
 # {baseurl} in search patterns will be replaced with the given baseurl
 #
+# {hash} will cause the named capture group to be replaced with the first 10 chars of its SHA256 hash.
+# You can name the capture groups 'user', 'internal_email' and 'external_email', and the username or local part
+# of the email address will be hashed to allow for attributability.
+# The replacement provided will be ignored, but for understandabilities sake you should define it like it's done below.
+#
 # Default filters:
-userName: \\S+||userName: USERNAME_CLEANED
+userName: (?P<user>\S+)||USERNAME_{hash}_CLEANED
 [A-Za-z0-9.-]*{baseurl}/?||URL_CLEANED
 #
 # Additional filters:
@@ -13,8 +18,8 @@ userName: \\S+||userName: USERNAME_CLEANED
 # (\w|\d)*?\S*(\w|\d)@URL_CLEANED||INTERNAL_EMAIL_CLEANED
 #
 # these match much faster, but are potentially less accurate
-[A-Za-z0-9._%+-]+(@|%40)[A-Za-z0-9.-]+\.[A-Za-z]{2,}||EXTERNAL_EMAIL_CLEANED
-[A-Za-z0-9._%+-]+(@|%40)URL_CLEANED||INTERNAL_EMAIL_CLEANED
+(?P<external_mail>[A-Za-z0-9._%+-]+)(@|%40)[A-Za-z0-9.-]+\.[A-Za-z]{2,}||EXTERNAL_EMAIL_{hash}_CLEANED
+(?P<internal_mail>[A-Za-z0-9._%+-]+)(@|%40)URL_CLEANED||INTERNAL_EMAIL_{hash}_CLEANED
 #
 # clean remaining internal smedia domains
 [A-Za-z0-9.-]*\.smhss\.de||SMEDIA_DOMAIN_CLEANED

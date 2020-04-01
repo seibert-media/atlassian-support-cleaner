@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import hashlib
 import os
 import re
 import sys
@@ -262,12 +263,36 @@ def _get_filters(filterfile: str) -> List[str]:
         return [line.strip() for line in file.readlines() if not line.startswith('#')]
 
 
+def _generate_hash(string: str) -> str:
+    return 'SHA256:' + hashlib.sha256(bytes(string, encoding='utf-8')).hexdigest()[:10]
+
+
+def _hash_replacement(match: re.Match) -> str:
+    replacement = '{hash}_CLEANED'
+    substitute = match.group(0)
+    groups = match.groupdict()
+    if 'internal_mail' in groups:
+        replacement = 'INTERNAL_EMAIL_{hash}_CLEANED'
+        substitute = groups['internal_mail']
+    elif 'external_mail' in groups:
+        replacement = 'EXTERNAL_EMAIL_{hash}_CLEANED'
+        substitute = groups['external_mail']
+    elif 'user' in groups:
+        replacement = 'USERNAME_{hash}_CLEANED'
+        substitute = groups['user']
+    replacement_hash = _generate_hash(substitute)
+    return replacement.format(hash=replacement_hash)
+
+
 def _replace_pattern_in_logs(pattern: str, replacement: str, logfiles: List[str]):
     print('-- pattern: "{}" --'.format(pattern))
     for logfile in logfiles:
         with open(logfile, 'r') as file:
             logcontent = file.read()
-            logcontent, nr = re.subn(pattern=re.compile(pattern), repl=replacement, string=logcontent)
+            if '{hash}' in replacement:
+                logcontent, nr = re.subn(pattern=re.compile(pattern), repl=_hash_replacement, string=logcontent)
+            else:
+                logcontent, nr = re.subn(pattern=re.compile(pattern), repl=replacement, string=logcontent)
             if nr:
                 print('{nr} replacements ({replacement}) in {logfile}'.format(
                     nr=nr,
