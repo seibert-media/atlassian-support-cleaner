@@ -1,0 +1,49 @@
+# an octothorpe at the start marks a comment
+#
+# {baseurl} in search patterns will be replaced with the given baseurl
+#
+# {hash} will cause the named capture group to be replaced with the first 10 chars of its SHA256 hash.
+# You can name the capture groups 'user', 'internal_email' and 'external_email', and the username or local part
+# of the email address will be hashed to allow for attributability.
+# If there is not capture groups with either of those names, the whole match will be hashed.
+# The replacement provided will be ignored, but for understandabilities sake you should define it like it's done below.
+#
+# Default filters:
+userName: (?P<user>\S+)||USERNAME_{hash}_CLEANED
+[A-Za-z0-9.-]*{baseurl}/?||URL_CLEANED
+#
+# Additional filters:
+#
+# these email replacements are very slow, due to the amount of arbitrary quantifiers needed, but match very thoroughly
+# (\w|\d)*?\S*(\w|\d)@(\d|\w|\-|\.)+\.\w+||EXTERNAL_EMAIL_CLEANED
+# (\w|\d)*?\S*(\w|\d)@URL_CLEANED||INTERNAL_EMAIL_CLEANED
+#
+# these match much faster, but are potentially less accurate
+(?P<external_mail>[A-Za-z0-9._%+-]+)(@|%40)[A-Za-z0-9.-]+\.[A-Za-z]{2,}||EXTERNAL_EMAIL_{hash}_CLEANED
+(?P<internal_mail>[A-Za-z0-9._%+-]+)(@|%40)URL_CLEANED||INTERNAL_EMAIL_{hash}_CLEANED
+#
+# clean remaining internal smedia domains
+[A-Za-z0-9.-]*\.smhss\.de||SMEDIA_DOMAIN_CLEANED
+#
+# clean the last byte of IP addresses
+((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3})(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)||\1IP_CLEANED
+#
+# clean usernames (probably needs tuning to fit the specific naming scheme)
+# \[\w+\d+\]||USERNAME_CLEANED
+#
+# clean private keys and certificates
+#(if these filters match, you should probably check that there are no keys left in other formats)
+\-{5}BEGIN .* PRIVATE KEY\-{5}.*\-{5}END .* PRIVATE KEY\-{5}||PRIVATE_KEY_CLEANED
+\-{5}BEGIN CERTIFICATE\-{5}.*\-{5}END CERTIFICATE\-{5}||CERTIFICATE_CLEANED
+#
+# filters for businesses
+# for increased accuracy and speed, it's advisable to add the official business name as it's own filter
+# this generic filter can be used to filter out business affiliates
+# Caution!
+# This will match 1 to 3 words (no punctiation) before the business form, so it might remove words that it shouldn't
+# Examples where it would match:
+# Deutsche Bank AG, Google Inc, Business GmbH, Chaos Computer Club e.V., dbk KG
+(\w+\s){1,3}(GmbH|AG|Co\. KG|KG|UG|KGaA|eG|LLC|Inc.|e\.\s?V\.)||BUSINESS_CLEANED
+#
+# clean names from adresses
+(Frau|Herr[n]?)(\s[A-Z][\w|\-]+){1,3}[\s,]?||NAME_CLEANED

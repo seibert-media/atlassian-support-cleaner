@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import hashlib
 import os
 import re
 import sys
@@ -19,6 +20,7 @@ LOGDIRS = [
 ]
 
 TMPDIR = TemporaryDirectory()
+SUPPORT_CLEANER_PATH = Path(__file__).parent.absolute()
 
 if sys.version_info < (3, 5):
     raise Exception('Python in version 3.5 or higher is required to run this tool.')
@@ -91,7 +93,8 @@ def _arguments() -> argparse.Namespace:
     )
     parser.add_argument(
         '--filterfile',
-        help='read additional filters from textfile',
+        help='read filters from textfile',
+        default='{support_cleaner_path}/filters.txt'.format(support_cleaner_path=SUPPORT_CLEANER_PATH)
     )
     return parser.parse_args()
 
@@ -212,26 +215,41 @@ def _remove_maillogs():
     delete_files(files=mail_log_files, message='Deleting mail log files\n')
 
 
-#  4 CLEAN LOGS
+#  4 CHECK LOGLEVEL
 
-def _clean_logs(baseurl: str, additional_filters: List[str]):
+def _check_loglevel():
+    # This regex matches the beginning of the standard atlassian logging format
+    # e.g. 2020-01-22 09:03:08,633 http-nio-8080-exec-55 INFO
+    regex_loglevel = r'^(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}(,|.)\d{1,3})\s.*?\s(INFO|DEBUG)'
     for logdir in LOGDIRS:
         logfiles = _list_files_in_dir('{tmpdir}/{logdir}'.format(tmpdir=TMPDIR.name, logdir=logdir))
-        _replace_pattern_in_logs(  # Clean URL
-            pattern=re.escape(baseurl),
-            replacement='URL_CLEANED',
-            logfiles=logfiles,
-        )
-        _replace_pattern_in_logs(  # Clean user names
-            pattern='userName: \\S+',
-            replacement='userName: USERNAME_CLEANED',
-            logfiles=logfiles,
-        )
-        for additional_filter in additional_filters:
+        for logfile in logfiles:
+            with open(logfile, 'r') as file:
+                logcontent = file.read()
+                if re.search(regex_loglevel, logcontent) is not None:
+                    input(
+                        '{boundary}'
+                        'Logmessages with level INFO or DEBUG have been detected!\n'
+                        'Please consider using a stricter loglevel to avoid exposing too much sensitive information.\n'
+                        'If this is not possible, take extra care to remove any sensitive information from the logs.\n'
+                        '{boundary}'
+                        'Press Enter to proceed.\n'.format(boundary=90 * '#' + '\n')
+                    )
+                    return
+
+
+#  5 CLEAN LOGS
+
+def _clean_logs(baseurl: str, filters: List[str]):
+    for logdir in LOGDIRS:
+        logfiles = _list_files_in_dir('{tmpdir}/{logdir}'.format(tmpdir=TMPDIR.name, logdir=logdir))
+        for potential_filter in filters:
             try:
-                pattern, replacement = additional_filter.split('||')
+                pattern, replacement = potential_filter.split('||')
+                if '{baseurl}' in pattern:
+                    pattern = pattern.replace('{baseurl}', baseurl)
             except ValueError:
-                print('"{}" is no valid filter string'.format(additional_filter))
+                print('"{}" is no valid filter string'.format(potential_filter))
                 continue
             _replace_pattern_in_logs(
                 pattern=pattern,
@@ -240,11 +258,30 @@ def _clean_logs(baseurl: str, additional_filters: List[str]):
             )
 
 
-def _get_additional_filters(filterfile: str) -> List[str]:
-    if filterfile:
-        with open(filterfile) as file:
-            return [line.strip() for line in file.readlines()]
-    return []
+def _get_filters(filterfile: str) -> List[str]:
+    with open(filterfile) as file:
+        return [line.strip() for line in file.readlines() if not line.startswith('#')]
+
+
+def _generate_hash(string: str) -> str:
+    return 'SHA256:' + hashlib.sha256(bytes(string, encoding='utf-8')).hexdigest()[:10]
+
+
+def _hash_replacement(match: re.Match) -> str:
+    replacement = '{hash}_CLEANED'
+    substitute = match.group(0)
+    groups = match.groupdict()
+    if 'internal_mail' in groups:
+        replacement = 'INTERNAL_EMAIL_{hash}_CLEANED'
+        substitute = groups['internal_mail']
+    elif 'external_mail' in groups:
+        replacement = 'EXTERNAL_EMAIL_{hash}_CLEANED'
+        substitute = groups['external_mail']
+    elif 'user' in groups:
+        replacement = 'USERNAME_{hash}_CLEANED'
+        substitute = groups['user']
+    replacement_hash = _generate_hash(substitute)
+    return replacement.format(hash=replacement_hash)
 
 
 def _replace_pattern_in_logs(pattern: str, replacement: str, logfiles: List[str]):
@@ -252,7 +289,11 @@ def _replace_pattern_in_logs(pattern: str, replacement: str, logfiles: List[str]
     for logfile in logfiles:
         with open(logfile, 'r') as file:
             logcontent = file.read()
-            logcontent, nr = re.subn(pattern=re.compile(pattern), repl=replacement, string=logcontent)
+            if '{hash}' in replacement:
+                # use _hash_replacement function in repl to determine the replacement string
+                logcontent, nr = re.subn(pattern=re.compile(pattern), repl=_hash_replacement, string=logcontent)
+            else:
+                logcontent, nr = re.subn(pattern=re.compile(pattern), repl=replacement, string=logcontent)
             if nr:
                 print('{nr} replacements ({replacement}) in {logfile}'.format(
                     nr=nr,
@@ -265,14 +306,18 @@ def _replace_pattern_in_logs(pattern: str, replacement: str, logfiles: List[str]
 
 def _clean_manual():
     input(
-        '\nAutomatic cleaning finished. The extracted files are available at {tmpdir}. '
-        'If you like, you can cleanup additional things manually or check how the files look like.\n'
+        '\nAutomatic cleaning finished. The extracted files are available at {tmpdir}. \n'
+        '\n################################################################################\n'
+        'These filters won\'t have cleaned everything perfectly from the logs!\n'
+        'Especially usernames and names of people or businesses may still be present.\n'
+        '##################################################################################\n'
+        '\nYou can cleanup additional things manually or check how the files look like.\n'
         'Press Enter to proceed.\n'
         ''.format(tmpdir=TMPDIR.name)
     )
 
 
-#  5 CREATE CLEANED ZIP AND CLEANUP
+#  6 CREATE CLEANED ZIP AND CLEANUP
 
 def _create_cleaned_zip():
     with zipfile.ZipFile('cleaned.zip', 'w', zipfile.ZIP_DEFLATED) as cleanedzip:
@@ -326,8 +371,11 @@ if __name__ == '__main__':
         print('\nRemove mail logs')
         _remove_maillogs()
 
+        print('\nCheck Loglevel')
+        _check_loglevel()
+
         print('\nClean unwanted information:')
-        _clean_logs(baseurl=args.baseurl, additional_filters=_get_additional_filters(args.filterfile))
+        _clean_logs(baseurl=args.baseurl, filters=_get_filters(args.filterfile))
 
         _clean_manual()
 
