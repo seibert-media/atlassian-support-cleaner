@@ -290,6 +290,7 @@ def _replace_pattern_in_logs(pattern: str, replacement: str, logfiles: List[str]
         with open(logfile, 'r') as file:
             logcontent = file.read()
             if '{hash}' in replacement:
+                # use _hash_replacement function in repl to determine the replacement string
                 logcontent, nr = re.subn(pattern=re.compile(pattern), repl=_hash_replacement, string=logcontent)
             else:
                 logcontent, nr = re.subn(pattern=re.compile(pattern), repl=replacement, string=logcontent)
