@@ -19,7 +19,7 @@ Python &ge; 3.5
 Usage
 --- 
 
-**./supportcleaner.py** _SUPPORT_ZIP_ _BASEURL_ [--filterfile _FILTER_FILE_] [--delete-oldest] [--delete-largest]
+**./supportcleaner.py** _SUPPORT_ZIP_ _BASEURL_ [--filterfile _FILTER_FILE_]
 
 Environment
 ---
@@ -52,9 +52,9 @@ This tool does cleaning the support zip by
 | Big Business LLC | BUSINESS_CLEANED|
 | Herr Müller | NAME_CLEANED |
 
-- remove files that are older than DELETE_AFTER_DAYS (default: 180) days (if --delete-oldest is set)
+- remove files that are older than DELETE_AFTER_DAYS (default: 180) days (interactive)
 
-- remove files that are within the LARGEST_PERCENT of files (default: largest 10%) (if --delete-largest is set)
+- remove files that are within the LARGEST_PERCENT of files (default: largest 10%) (interactive)
 
 - you can add additional filters by using the filterfile argument, which takes a filepath:
   - each line of the file is treated as one filter
