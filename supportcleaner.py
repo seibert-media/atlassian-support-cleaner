@@ -58,6 +58,15 @@ def get_free_disk_space(path: str) -> int:
     return free
 
 
+def _list_files_in_dir(path: str, pattern='.*') -> List[str]:
+    filelist = []
+    for root, dirs, files in os.walk(path):
+        for file in files:
+            if re.match(pattern=pattern, string=file):
+                filelist.append(os.path.join(root, file))
+    return filelist
+
+
 def print_files(files: List[Tuple[str, Any]], intro: str):
     print(intro)
     for path, value in files:
@@ -107,6 +116,13 @@ def _prepare():
         pass
 
 
+def _get_uncompressed_size(zipf: zipfile.ZIP_DEFLATED) -> int:
+    size = 0
+    for file in zipf.infolist():
+        size += file.file_size
+    return size
+
+
 def _extract_zip(supportzip: str):
     global MAX_TMP_DIR_SIZE
     with zipfile.ZipFile(supportzip, 'r') as zipf:
@@ -136,40 +152,9 @@ def _extract_zip(supportzip: str):
         zipf.extractall(TMPDIR.name)
 
 
-def _get_uncompressed_size(zipf: zipfile.ZIP_DEFLATED) -> int:
-    size = 0
-    for file in zipf.infolist():
-        size += file.file_size
-    return size
-
-
 #  3 DELETE UNWANTED LOGS
 
 #  3.1 OLD FILES
-
-def _remove_old_files(supportzip: str):
-    limit = _set_age_limit()
-    if not limit:
-        return
-
-    delete_timedelta = timedelta(days=limit)
-
-    old_files = _collect_old_files(supportzip, delete_timedelta)
-    print_files(files=old_files, intro='The following files are older than {} days:\n'.format(delete_timedelta.days))
-    delete_files(files=old_files, message='Deleting old files\n')
-
-
-def _collect_old_files(supportzip: str, delete_timedelta: timedelta) -> List[Tuple[str, datetime]]:
-    old_files = []
-    with zipfile.ZipFile(supportzip, 'r') as zipf:
-        for file in zipf.infolist():
-            name = '{tmpdir}/{rel_path}'.format(tmpdir=TMPDIR.name, rel_path=file.filename)
-            (year, month, day, hours, minutes, seconds) = file.date_time
-            date_time = datetime(year=year, month=month, day=day, hour=hours, minute=minutes, second=seconds)
-            if datetime.now() - date_time > delete_timedelta:
-                old_files.append((name, date_time))
-    return old_files
-
 
 def _set_age_limit() -> int:
     if os.getenv('DELETE_AFTER_DAYS'):
@@ -185,13 +170,31 @@ def _set_age_limit() -> int:
             break
 
 
+def _collect_old_files(supportzip: str, delete_timedelta: timedelta) -> List[Tuple[str, datetime]]:
+    old_files = []
+    with zipfile.ZipFile(supportzip, 'r') as zipf:
+        for file in zipf.infolist():
+            name = '{tmpdir}/{rel_path}'.format(tmpdir=TMPDIR.name, rel_path=file.filename)
+            (year, month, day, hours, minutes, seconds) = file.date_time
+            date_time = datetime(year=year, month=month, day=day, hour=hours, minute=minutes, second=seconds)
+            if datetime.now() - date_time > delete_timedelta:
+                old_files.append((name, date_time))
+    return old_files
+
+
+def _remove_old_files(supportzip: str):
+    limit = _set_age_limit()
+    if not limit:
+        return
+
+    delete_timedelta = timedelta(days=limit)
+
+    old_files = _collect_old_files(supportzip, delete_timedelta)
+    print_files(files=old_files, intro='The following files are older than {} days:\n'.format(delete_timedelta.days))
+    delete_files(files=old_files, message='Deleting old files\n')
+
+
 #  3.2 BIG FILES
-
-def _remove_large_files():
-    large_files = _collect_largest_files()
-    print_files(files=large_files, intro='Largest {}%:'.format(LARGEST_PERCENT))
-    delete_files(files=large_files, message='Deleting largest files\n')
-
 
 def _collect_largest_files() -> List[Tuple[str, str]]:
     logfiles = _list_files_in_dir(TMPDIR.name)
@@ -204,6 +207,12 @@ def _collect_largest_files() -> List[Tuple[str, str]]:
     n_small_files = int(len(file_sizes) * (1 - LARGEST_PERCENT / 100))
     large_files = file_sizes[n_small_files:]
     return [(path, add_unit_prefix(size)) for (path, size) in large_files]
+
+
+def _remove_large_files():
+    large_files = _collect_largest_files()
+    print_files(files=large_files, intro='Largest {}%:'.format(LARGEST_PERCENT))
+    delete_files(files=large_files, message='Deleting largest files\n')
 
 
 #  3.3 MAIL LOGS
@@ -239,24 +248,6 @@ def _check_loglevel():
 
 
 #  5 CLEAN LOGS
-
-def _clean_logs(baseurl: str, filters: List[str]):
-    for logdir in LOGDIRS:
-        logfiles = _list_files_in_dir('{tmpdir}/{logdir}'.format(tmpdir=TMPDIR.name, logdir=logdir))
-        for potential_filter in filters:
-            try:
-                pattern, replacement = potential_filter.split('||')
-                if '{baseurl}' in pattern:
-                    pattern = pattern.replace('{baseurl}', baseurl)
-            except ValueError:
-                print('"{}" is no valid filter string'.format(potential_filter))
-                continue
-            _replace_pattern_in_logs(
-                pattern=pattern,
-                replacement=replacement,
-                logfiles=logfiles,
-            )
-
 
 def _get_filters(filterfile: str) -> List[str]:
     with open(filterfile) as file:
@@ -304,6 +295,24 @@ def _replace_pattern_in_logs(pattern: str, replacement: str, logfiles: List[str]
             file.write(logcontent)
 
 
+def _clean_logs(baseurl: str, filters: List[str]):
+    for logdir in LOGDIRS:
+        logfiles = _list_files_in_dir('{tmpdir}/{logdir}'.format(tmpdir=TMPDIR.name, logdir=logdir))
+        for potential_filter in filters:
+            try:
+                pattern, replacement = potential_filter.split('||')
+                if '{baseurl}' in pattern:
+                    pattern = pattern.replace('{baseurl}', baseurl)
+            except ValueError:
+                print('"{}" is no valid filter string'.format(potential_filter))
+                continue
+            _replace_pattern_in_logs(
+                pattern=pattern,
+                replacement=replacement,
+                logfiles=logfiles,
+            )
+
+
 def _clean_manual():
     input(
         '\nAutomatic cleaning finished. The extracted files are available at {tmpdir}. \n'
@@ -319,23 +328,14 @@ def _clean_manual():
 
 #  6 CREATE CLEANED ZIP AND CLEANUP
 
-def _create_cleaned_zip():
-    with zipfile.ZipFile('cleaned.zip', 'w', zipfile.ZIP_DEFLATED) as cleanedzip:
-        _zip_dir(cleanedzip)
-
-
 def _zip_dir(ziph: zipfile.ZipFile):
     for file in _list_files_in_dir(TMPDIR.name):
         ziph.write(filename=file, arcname=str(Path(file).relative_to(TMPDIR.name)))
 
 
-def _list_files_in_dir(path: str, pattern='.*') -> List[str]:
-    filelist = []
-    for root, dirs, files in os.walk(path):
-        for file in files:
-            if re.match(pattern=pattern, string=file):
-                filelist.append(os.path.join(root, file))
-    return filelist
+def _create_cleaned_zip():
+    with zipfile.ZipFile('cleaned.zip', 'w', zipfile.ZIP_DEFLATED) as cleanedzip:
+        _zip_dir(cleanedzip)
 
 
 def _cleanup():
