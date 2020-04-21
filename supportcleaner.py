@@ -258,7 +258,11 @@ def _generate_hash(string: str) -> str:
     return 'SHA256:' + hashlib.sha256(bytes(string, encoding='utf-8')).hexdigest()[:10]
 
 
-def _hash_replacement(match: re.Match) -> str:
+def _hash_replacement(match) -> str:
+    """
+    Takes a re.Match (or in Python <= 3.6 _sre.SRE_MATCH) and returns a string consisting of a replacement-string and
+    the hash of the named group.
+    """
     replacement = '{hash}_CLEANED'
     substitute = match.group(0)
     groups = match.groupdict()
