@@ -93,12 +93,12 @@ def _arguments() -> argparse.Namespace:
         description='CLI tool to clean Atlassian support.zip from various data',
     )
     parser.add_argument(
-        'supportzip',
-        help='Path to support zip file to be cleaned',
-    )
-    parser.add_argument(
         'baseurl',
         help='Base-URL of the corresponding system',
+    )
+    parser.add_argument(
+        '--supportzip',
+        help='Path to support zip file to be cleaned, if not set you can clean files without extracting/compressing',
     )
     parser.add_argument(
         '--filterfile',
@@ -363,8 +363,14 @@ if __name__ == '__main__':
     try:
         _prepare()
 
-        print('\nExtract support zip')
-        _extract_zip(supportzip=args.supportzip)
+        if args.supportzip:
+            print('\nExtract support zip')
+            _extract_zip(supportzip=args.supportzip)
+        else:
+            input(
+                'Copy the files you want to be cleaned to {tmpdir} '
+                'and press ENTER to proceed.'.format(tmpdir=TMPDIR.name)
+            )
 
         print('\nRemove old files')
         _remove_old_files(supportzip=args.supportzip)
@@ -381,9 +387,15 @@ if __name__ == '__main__':
         print('\nClean unwanted information:')
         _clean_logs(baseurl=args.baseurl, filters=_get_filters(args.filterfile))
 
-        _clean_manual()
+        if args.supportzip:
+            _clean_manual()
 
-        print('\nCreate cleaned.zip')
-        _create_cleaned_zip()
+            print('\nCreate cleaned.zip')
+            _create_cleaned_zip()
+        else:
+            input(
+                '\nCleaning is done. Copy the cleaned files from {tmpdir} '
+                'and press ENTER to remove the temporary directory.'.format(tmpdir=TMPDIR.name)
+            )
     finally:
         _cleanup()

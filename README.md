@@ -19,7 +19,7 @@ Python &ge; 3.5
 Usage
 --- 
 
-**./supportcleaner.py** _SUPPORT_ZIP_ _BASEURL_ [--filterfile _FILTER_FILE_]
+**./supportcleaner.py** _BASEURL_ [--supportzip _SUPPORT_ZIP_] [--filterfile _FILTER_FILE_]
 
 Environment
 ---
@@ -29,14 +29,14 @@ Environment
 Example
 ---
 ```bash
-./supportcleaner.py Confluence_support_2019-02-14-11-43-28.zip my-base-url.net
+./supportcleaner.py my-base-url.net --supportzip Confluence_support_2019-02-14-11-43-28.zip
 ```
 
 How it works
 ---
 
 This tool does cleaning the support zip by
-- extracting the zip file
+- extracting the zip file or giving instructions for placing relevant files manually in the temporary directory, if no supportzip is supplied
 - replacing in files (defined via LOGDIR, default: all):
 
 |Example|Replacement|
@@ -61,7 +61,7 @@ This tool does cleaning the support zip by
   - each filter is splitted by "||" in two parts
   - first: search pattern (Python regex), second: replacement
 
-- creating new zip named "**cleaned.zip**" (if already existing, it will be deleted at program start)
+- if supportzip was supplied: creating new zip named "**cleaned.zip**" (if already existing, it will be deleted at program start)
 
 Predefined filters
 ---
