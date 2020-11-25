@@ -179,7 +179,7 @@ def _collect_old_files(supportzip: str, delete_timedelta: timedelta) -> List[Tup
             date_time = datetime(year=year, month=month, day=day, hour=hours, minute=minutes, second=seconds)
             if datetime.now() - date_time > delete_timedelta:
                 old_files.append((name, date_time))
-    return old_files
+    return sorted(old_files, key=lambda k: k[0])
 
 
 def _remove_old_files(supportzip: str):
