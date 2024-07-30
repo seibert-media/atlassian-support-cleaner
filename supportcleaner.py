@@ -233,7 +233,7 @@ def _check_loglevel():
     for logdir in LOGDIRS:
         logfiles = _list_files_in_dir('{tmpdir}/{logdir}'.format(tmpdir=TMPDIR.name, logdir=logdir))
         for logfile in logfiles:
-            with open(logfile, 'r') as file:
+            with open(logfile, 'r', encoding='latin-1') as file:
                 logcontent = file.read()
                 if re.search(regex_loglevel, logcontent) is not None:
                     input(
@@ -282,7 +282,7 @@ def _hash_replacement(match) -> str:
 def _replace_pattern_in_logs(pattern: str, replacement: str, logfiles: List[str]):
     print('-- pattern: "{}" --'.format(pattern))
     for logfile in logfiles:
-        with open(logfile, 'r') as file:
+        with open(logfile, 'r', encoding='latin-1') as file:
             logcontent = file.read()
             if '{hash}' in replacement:
                 # use _hash_replacement function in repl to determine the replacement string
@@ -295,7 +295,7 @@ def _replace_pattern_in_logs(pattern: str, replacement: str, logfiles: List[str]
                     replacement=replacement,
                     logfile=Path(logfile).relative_to(TMPDIR.name),
                 ))
-        with open(logfile, 'w+') as file:
+        with open(logfile, 'w+', encoding='latin-1') as file:
             file.write(logcontent)
 
 
